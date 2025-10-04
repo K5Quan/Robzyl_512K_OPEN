@@ -40,12 +40,12 @@ LOG = logging.getLogger(__name__)
 
 # Show the obfuscated version of commands. Not needed normally, but
 # might be useful for someone who is debugging a similar radio
-DEBUG_SHOW_OBFUSCATED_COMMANDS = True
+DEBUG_SHOW_OBFUSCATED_COMMANDS = False
 
 # Show the memory being written/received. Not needed normally, because
 # this is the same information as in the packet hexdumps, but
 # might be useful for someone debugging some obscure memory issue
-DEBUG_SHOW_MEMORY_ACTIONS = True
+DEBUG_SHOW_MEMORY_ACTIONS = False
 
 # TODO: remove the driver version when it's in mainline chirp
 DRIVER_VERSION = "Quansheng UV-K5 ROBZYL"
@@ -55,27 +55,254 @@ MEM_FORMAT = """
 
 #seekto 0x2000;
 struct {
-  char name[16];
   ul32 freq;
   ul32 offset;
+
+// 0x08
   u8 rxcode;
   u8 txcode;
+
+// 0x0A
   u8 txcodeflag:4,
   rxcodeflag:4;
+
+// 0x0B
   u8 modulation:4,
   offsetDir:4;
+
+// 0x0C
   u8 __UNUSED1:1,
   bandwidth_ext:2,
   busyChLockout:1,
   txpower:2,
   bandwidth:1,
   freq_reverse:1;
+
+  // 0x0D
+  u8 __UNUSED2:4,
+  dtmf_pttid:3,
+  dtmf_decode:1;
+
+  // 0x0E
   u8 step;
   u8 scrambler;
-  u8 scanlist:4,
-  is_free:1,
-  band:3;
-} channel[1000]; // Size 32+32+8*8 = 128b > 16 Bytes
+
+} channel[200];
+
+//#seekto 0xd60;
+struct {
+u8 scanlist:4,
+is_free:1,
+band:3;
+} ch_attr[200];
+
+#seekto 0xe40;
+ul16 fmfreq[20];
+
+#seekto 0xe70;
+u8 call_channel;
+u8 squelch;
+u8 max_talk_time;
+u8 noaa_autoscan;
+u8 key_lock;
+u8 mic_gain;
+
+
+u8 backlight_min:4,
+backlight_max:4;
+
+u8 channel_display_mode;
+u8 crossband;
+u8 battery_save;
+u8 backlight_time;
+u8 ste;
+u8 freq_mode_allowed;
+
+#seekto 0xe80;
+u8 ScreenChannel_A;
+u8 MrChannel_A;
+u8 FreqChannel_A;
+u8 ScreenChannel_B;
+u8 MrChannel_B;
+u8 FreqChannel_B;
+
+
+#seekto 0xe90;
+
+u8 keyM_longpress_action:7,
+    button_beep:1;
+
+u8 key1_shortpress_action;
+u8 key1_longpress_action;
+u8 key2_shortpress_action;
+u8 key2_longpress_action;
+u8 scan_resume_mode;
+u8 auto_keypad_lock;
+u8 power_on_dispmode;
+ul32 password;
+
+#seekto 0xea0;
+u8 voice;
+u8 s0_level;
+u8 s9_level;
+
+#seekto 0xea8;
+u8 roger_beep;
+u8 rp_ste;
+u8 TX_VFO;
+u8 Battery_type;
+
+#seekto 0xeb0;
+char logo_line1[16];
+char logo_line2[16];
+
+//#seekto 0xed0;
+struct {
+    u8 side_tone;
+    char separate_code;
+    char group_call_code;
+    u8 decode_response;
+    u8 auto_reset_time;
+    u8 preload_time;
+    u8 first_code_persist_time;
+    u8 hash_persist_time;
+    u8 code_persist_time;
+    u8 code_interval_time;
+    u8 permit_remote_kill;
+
+    #seekto 0xee0;
+    char local_code[3];
+    #seek 5;
+    char kill_code[5];
+    #seek 3;
+    char revive_code[5];
+    #seek 3;
+    char up_code[16];
+    char down_code[16];
+} dtmf;
+
+//#seekto 0xf18;
+u8 slDef;
+u8 sl1PriorEnab;
+u8 sl1PriorCh1;
+u8 sl1PriorCh2;
+u8 sl2PriorEnab;
+u8 sl2PriorCh1;
+u8 sl2PriorCh2;
+
+u8  backlight_on_TX_RX:2,
+    AM_fix:1,
+    mic_bar:1,
+    battery_text:2,
+    live_DTMF_decoder:1,
+    unknown:1;
+
+  
+#seekto 0x5E80;
+struct {
+char name[16];
+} channelname[200];
+
+#seekto 0x1c00;
+struct {
+char name[8];
+char number[3];
+#seek 5;
+} dtmfcontact[16];
+
+struct {
+    struct {
+        #seekto 0x1E00;
+        u8 openRssiThr[10];
+        #seekto 0x1E10;
+        u8 closeRssiThr[10];
+        #seekto 0x1E20;
+        u8 openNoiseThr[10];
+        #seekto 0x1E30;
+        u8 closeNoiseThr[10];
+        #seekto 0x1E40;
+        u8 closeGlitchThr[10];
+        #seekto 0x1E50;
+        u8 openGlitchThr[10];
+    } sqlBand4_7;
+
+    struct {
+        #seekto 0x1E60;
+        u8 openRssiThr[10];
+        #seekto 0x1E70;
+        u8 closeRssiThr[10];
+        #seekto 0x1E80;
+        u8 openNoiseThr[10];
+        #seekto 0x1E90;
+        u8 closeNoiseThr[10];
+        #seekto 0x1EA0;
+        u8 closeGlitchThr[10];
+        #seekto 0x1EB0;
+        u8 openGlitchThr[10];
+    } sqlBand1_3;
+
+    #seekto 0x1EC0;
+    struct {
+        ul16 level1;
+        ul16 level2;
+        ul16 level4;
+        ul16 level6;
+    } rssiLevelsBands3_7;
+
+    struct {
+        ul16 level1;
+        ul16 level2;
+        ul16 level4;
+        ul16 level6;
+    } rssiLevelsBands1_2;
+
+    struct {
+        struct {
+            u8 lower;
+            u8 center;
+            u8 upper;
+        } low;
+        struct {
+            u8 lower;
+            u8 center;
+            u8 upper;
+        } mid;
+        struct {
+            u8 lower;
+            u8 center;
+            u8 upper;
+        } hi;
+        #seek 7;
+    } txp[7];
+
+    #seekto 0x1F40;
+    ul16 batLvl[6];
+
+    #seekto 0x1F80;
+    u8 micLevel[5];
+
+    #seekto 0x1F88;
+    il16 xtalFreqLow;
+
+    #seekto 0x1F8E;
+    u8 volumeGain;
+    u8 dacGain;
+} cal;
+
+
+#seekto 0x1FF0;
+struct {
+u8 ENABLE_DTMF_CALLING:1,
+   ENABLE_PWRON_PASSWORD:1,
+   ENABLE_TX1750:1,
+   ENABLE_FMRADIO:1;
+u8 __UNUSED:3,
+   ENABLE_AM_FIX:1,
+   ENABLE_BLMIN_TMP_OFF:1,
+   ENABLE_RAW_DEMODULATORS:1,
+   ENABLE_WIDE_RX:1,
+   ENABLE_FLASHLIGHT:1;
+} BUILD_OPTIONS;
 
 """
 
@@ -194,27 +421,6 @@ CAL_START = 0x1E00 # calibration memory start address
 # fm radio supported frequencies
 FMMIN = 76.0
 FMMAX = 108.0
-
-# bands supported by the UV-K5
-BANDS_STANDARD = {
-        0: [ 50.0, 76.0],
-        1: [108.0, 136.9999],
-        2: [137.0, 173.9999],
-        3: [174.0, 349.9999],
-        4: [350.0, 399.9999],
-        5: [400.0, 469.9999],
-        6: [470.0, 600.0]
-        }
-
-BANDS_WIDE = {
-        0: [ 18.0, 108.0],
-        1: [108.0, 136.9999],
-        2: [137.0, 173.9999],
-        3: [174.0, 349.9999],
-        4: [350.0, 399.9999],
-        5: [400.0, 469.9999],
-        6: [470.0, 2600.0]
-        }
 
 SCANLIST_LIST = ["None", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
 SCANLIST_SELECT_LIST = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
@@ -508,40 +714,14 @@ def list_def(value, lst, default):
 class UVK5Radio(chirp_common.CloneModeRadio):
     """Quansheng UV-K5"""
     VENDOR = "Quansheng"
-    MODEL = "UV-K5 (ROBBY69)"
+    MODEL = "UV-K5 ROBZYL"
     BAUD_RATE = 38400
     NEEDS_COMPAT_SERIAL = False
     FIRMWARE_VERSION = ""
 
     upload_calibration = False
 
-    def _find_band(self, hz):
-        mhz = hz/1000000.0
-        bands = BANDS_WIDE if self._memobj.BUILD_OPTIONS.ENABLE_WIDE_RX \
-                else BANDS_STANDARD
-        for bnd, rng in bands.items():
-            if rng[0] <= mhz <= rng[1]:
-                return bnd
-        return False
-
-    def _get_vfo_channel_names(self):
-        """generates VFO_CHANNEL_NAMES"""
-        is_wide = self._memobj.BUILD_OPTIONS.ENABLE_WIDE_RX
-        bands = BANDS_STANDARD if not is_wide else BANDS_WIDE
-        names = []
-        for bnd, rng in bands.items():
-            name = f"F{bnd + 1}({round(rng[0])}M-{round(rng[1])}M)"
-            names.append(name + "A")
-            names.append(name + "B")
-        return names
-
-    def _get_specials(self):
-        """generates SPECIALS"""
-        specials = {}
-        for idx, name in enumerate(self._get_vfo_channel_names()):
-            specials[name] = 200 + idx
-        return specials
-
+    
     @classmethod
     def get_prompts(cls):
         rp = chirp_common.RadioPrompts()
@@ -581,7 +761,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         rf.has_comment = False
         rf.valid_name_length = 10
         rf.valid_power_levels = UVK5_POWER_LEVELS
-        rf.valid_special_chans = self._get_vfo_channel_names()
         rf.valid_duplexes = ["", "-", "+", "off"]
 
         steps = STEPS.copy()
@@ -593,26 +772,20 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                                 "->Tone", "->DTCS", "DTCS->", "DTCS->DTCS"]
 
         rf.valid_characters = chirp_common.CHARSET_ASCII
-        rf.valid_modes = ["FM", "NFM", "AM", "NAM", "AIR", "USB"]
+        rf.valid_modes = ["FM", "NFM", "AM", "USB"]
 
         rf.valid_skips = [""]
 
         # This radio supports memories 1-200, 201-214 are the VFO memories
-        rf.memory_bounds = (1, 1000)
+        rf.memory_bounds = (1, 200)
 
         # This is what the BK4819 chip supports
         # Will leave it in a comment, might be useful someday
         # rf.valid_bands = [(18000000,  620000000),
         #                  (840000000, 1300000000)
         #                  ]
-        rf.valid_bands = []
-        bands = BANDS_WIDE if self._memobj.BUILD_OPTIONS.ENABLE_WIDE_RX \
-                else BANDS_STANDARD
-        for _, rng in bands.items():
-            rf.valid_bands.append(
-                    (int(rng[0]*1000000), int(rng[1]*1000000)))
-        return rf
-
+        
+        
     # Do a download of the radio from the serial port
     def sync_in(self):
         self._mmap = do_download(self)
@@ -645,20 +818,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         else:
             txfreq = mem.freq
 
-        # find band
-        band = self._find_band(txfreq)
-        if band is False:
-            msg = f"Transmit frequency {txfreq/1000000.0:.4f}MHz " \
-                   "is not supported by this radio"
-            msgs.append(chirp_common.ValidationWarning(msg))
 
-        band = self._find_band(mem.freq)
-        if band is False:
-            msg = f"The frequency {mem.freq/1000000.0:%.4f}MHz " \
-                   "is not supported by this radio"
-            msgs.append(chirp_common.ValidationWarning(msg))
-
-        return msgs
 
     def _set_tone(self, mem, _mem):
         ((txmode, txtone, txpol),
@@ -735,11 +895,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         mem = chirp_common.Memory()
 
-        if isinstance(number, str):
-            ch_num = self._get_specials()[number]
-            mem.extd_number = number
-        else:
-            ch_num = number - 1
+        ch_num = number - 1
 
         mem.number = ch_num + 1
 
@@ -753,7 +909,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # We'll also look at the channel attributes if a memory has them
         tmpscn = SCANLIST_LIST[0]
         tmp_comp = 0
-        if ch_num < 1000:
+        if ch_num < 200:
             _mem3 = self._memobj.ch_attr[ch_num]
             # free memory bit
             if _mem3.is_free:
@@ -800,16 +956,13 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             return mem
 
-        if ch_num > 999:
-            mem.name = self._get_vfo_channel_names()[ch_num-1000]
-            mem.immutable = ["name", "scanlist"]
-        else:
-            _mem2 = self._memobj.channelname[ch_num]
-            for char in _mem2.name:
-                if str(char) == "\xFF" or str(char) == "\x00":
-                    break
-                mem.name += str(char)
-            mem.name = mem.name.rstrip()
+
+        _mem2 = self._memobj.channelname[ch_num]
+        for char in _mem2.name:
+            if str(char) == "\xFF" or str(char) == "\x00":
+                break
+            mem.name += str(char)
+        mem.name = mem.name.rstrip()
 
         # Convert your low-level frequency to Hertz
         mem.freq = int(_mem.freq)*10
@@ -920,9 +1073,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             # VFO_A e80 ScreenChannel_A
             if elname == "VFO_A_chn":
                 _mem.ScreenChannel_A = int(element.value)
-                if _mem.ScreenChannel_A < 1000:
+                if _mem.ScreenChannel_A < 200:
                     _mem.MrChannel_A = _mem.ScreenChannel_A
-                elif _mem.ScreenChannel_A < 1007:
+                elif _mem.ScreenChannel_A < (200 + 7):
                     _mem.FreqChannel_A = _mem.ScreenChannel_A
                 else:
                     _mem.NoaaChannel_A = _mem.ScreenChannel_A
@@ -930,9 +1083,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             # VFO_B e83
             elif elname == "VFO_B_chn":
                 _mem.ScreenChannel_B = int(element.value)
-                if _mem.ScreenChannel_B < 1000:
+                if _mem.ScreenChannel_B < 200:
                     _mem.MrChannel_B = _mem.ScreenChannel_B
-                elif _mem.ScreenChannel_B < 1007:
+                elif _mem.ScreenChannel_B < (200 + 7):
                     _mem.FreqChannel_B = _mem.ScreenChannel_B
                 else:
                     _mem.NoaaChannel_B = _mem.ScreenChannel_B
@@ -1188,10 +1341,8 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 ################## Basic settings
 
         ch_list = []
-        for ch in range(1, 201):
+        for ch in range(1, 200):
             ch_list.append("Channel M" + str(ch))
-        for bnd in range(1, 8):
-            ch_list.append("Band F" + str(bnd))
         
         tmpfreq0 = list_def(_mem.ScreenChannel_A, ch_list, 0)
         val = RadioSettingValueList(ch_list, None, tmpfreq0)
@@ -1573,7 +1724,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # empty memory
         if memory.empty:
             _mem.set_raw("\xFF" * 16)
-            if number < 1000:
+            if number < 200:
                 _mem2 = self._memobj.channelname[number]
                 _mem2.set_raw("\xFF" * 16)
                 _mem4.ch_attr[number].scanlist = 0
@@ -1581,13 +1732,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 _mem4.ch_attr[number].band = 0x7
             return memory
 
-        if number < 1000:
+        if number < 200:
             _mem4.ch_attr[number].scanlist = 0
             _mem4.ch_attr[number].is_free = 1
             _mem4.ch_attr[number].band = 0x7
-
-        # find band
-        band = self._find_band(memory.freq)
 
         # mode ["FM", "NFM", "AM", "NAM", "AIR", "USB"]
         # 0 = FM, 1 = AM, 2 = USB
@@ -1601,13 +1749,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         elif memory.mode == "AM":
             _mem.modulation = 1
             _mem.bandwidth = 0
-        elif memory.mode == "NAM":
-            _mem.modulation = 1
-            _mem.bandwidth = 1
-        elif memory.mode == "AIR":
-            _mem.modulation = 1
-            _mem.bandwidth = 1
-            _mem.bandwidth_ext = 1
         elif memory.mode == "USB":
             _mem.modulation = 2
             _mem.bandwidth = 1
@@ -1628,12 +1769,12 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             _mem.offsetDir = FLAGS1_OFFSET_MINUS
             _mem.offset = _mem.freq
         # set band
-        if number < 1000:
+        if number < 200:
             _mem4.ch_attr[number].is_free = 0
             _mem4.ch_attr[number].band = band
 
-        # channels >1000 are the 14 VFO chanells and don't have names
-        if number < 1000:
+        # channels >200 are the 14 VFO chanells and don't have names
+        if number < 200:
             _mem2 = self._memobj.channelname[number]
             tag = memory.name.ljust(10) + "\x00"*6
             _mem2.name = tag  # Store the alpha tag
@@ -1667,7 +1808,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         _mem.freq_reverse = get_setting("frev", False)
         _mem.dtmf_decode = get_setting("dtmfdecode", False)
         _mem.scrambler = get_setting("scrambler", 0)
-        if number < 1000:
+        if number < 200:
             tmp_val = get_setting("scanlist", 0)
             _mem4.ch_attr[number].scanlist = tmp_val
 

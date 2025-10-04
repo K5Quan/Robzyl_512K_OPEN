@@ -45,7 +45,7 @@
 
 enum {
 	MR_CHANNEL_FIRST   = 0,
-	MR_CHANNEL_LAST    = 999u,
+	MR_CHANNEL_LAST    = 199u,
 	FREQ_CHANNEL_FIRST = MR_CHANNEL_LAST+1,
 	FREQ_CHANNEL_LAST  = MR_CHANNEL_LAST+7,
 	LAST_CHANNEL
@@ -148,6 +148,16 @@ typedef union {
     };
     uint8_t __val;
 } ChannelAttributes_t;
+
+#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
+typedef struct
+{
+	uint32_t     Frequency;
+	char         Name[12];
+}  __attribute__((packed)) ChannelFrequencyAttributes;
+
+extern ChannelFrequencyAttributes gMR_ChannelFrequencyAttributes[MR_CHANNEL_LAST];
+#endif
 
 #ifdef ENABLE_SCREENSHOT
          extern volatile uint8_t  gUART_LockScreenshot; // lock screenshot if Chirp is used

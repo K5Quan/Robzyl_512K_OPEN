@@ -33,6 +33,10 @@ void     BOARD_EEPROM_Init(void);
 void     BOARD_EEPROM_LoadCalibration(void);
 uint32_t BOARD_fetchChannelFrequency(const uint16_t Channel);
 void     BOARD_FactoryReset();
+#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
+void     BOARD_gMR_LoadChannels();
+uint16_t      BOARD_gMR_fetchChannel(const uint32_t freq);
+#endif
 
 #endif
 

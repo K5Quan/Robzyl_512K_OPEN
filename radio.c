@@ -788,10 +788,10 @@ void RADIO_SendEndOfTransmission(bool playRoger)
 	if (playRoger) {BK4819_PlayRoger(gEeprom.ROGER);}
 }
 
-uint8_t RADIO_ValidMemoryChannelsCount(bool bCheckScanList, uint8_t VFO)
+uint16_t RADIO_ValidMemoryChannelsCount(bool bCheckScanList, uint8_t VFO)
 	{
-		uint8_t count=0;
-		for (int i = MR_CHANNEL_FIRST; i<=MR_CHANNEL_LAST; ++i) {
+		uint16_t count=0;
+		for (uint16_t i = MR_CHANNEL_FIRST; i<=MR_CHANNEL_LAST; ++i) {
 			if(RADIO_CheckValidChannel(i, bCheckScanList, VFO))
 				count++;
 		}

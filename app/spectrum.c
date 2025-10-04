@@ -108,12 +108,12 @@ static uint32_t initialFreq;
 static char String[100];
 static char StringC[10];
 bool isKnownChannel = false;
-int  Channel;
+int  channel;
 int  latestChannel;
-char ChannelName[12];
+char channelName[12];
 char rxChannelName[12];
-ModulationMode_t  ChannelModulation;
-BK4819_FilterBandwidth_t ChannelBandwidth;
+ModulationMode_t  channelModulation;
+BK4819_FilterBandwidth_t channelBandwidth;
 void LoadValidMemoryChannels(void);
 bool isInitialized = false;
 bool isListening = true;
@@ -467,7 +467,7 @@ uint32_t GetBW() { return GetStepsCount() * GetScanStep(); }
 uint16_t GetRandomChannelFromRSSI(uint16_t maxChannels) {
   uint32_t rssi = rssiHistory[1]*rssiHistory[maxChannels/2];
   if (maxChannels == 0 || rssi == 0) {
-        return 1;  // Fallback to Channel 1 if invalid input
+        return 1;  // Fallback to channel 1 if invalid input
     }
     // Scale RSSI to [1, maxChannels]
     return 1 + (rssi % maxChannels);
@@ -496,25 +496,6 @@ static void DeInitSpectrum(bool ComeBack) {
     }
 }
 
-void ReadChannelFrequency(uint16_t Channel, uint32_t frequency){
-  EEPROM_ReadBuffer( 0x2000+ Channel * 16, &frequency, 4);
-}
-
-void ReadChannelName(uint16_t Channel, char name){
-  EEPROM_ReadBuffer( 0x2000+ Channel * 16, &name, 10);
-}
-
-uint16_t FetchChannelNumber(uint32_t frequency){
-  uint32_t f;
-  for (int i = MR_CHANNEL_FIRST; i <= MR_CHANNEL_LAST; i++) {
-      //ReadChannelFrequency(i,f);
-			if (f == frequency)
-				return i;
-		} 
-		// Return -1 if no Channel found
-		return -1;
-}
-
 static void ExitAndCopyToVfo() {
   RestoreRegisters();
 if (historyListActive == true){
@@ -531,15 +512,18 @@ if (historyListActive == true){
           uint8_t i = 0;
           SpectrumDelay = 0; //not compatible with ninja
 
-          while (rssiHistory[randomChannel]> 120) //check Channel availability
+          while (rssiHistory[randomChannel]> 120) //check channel availability
             {i++;
             randomChannel++;
             if (randomChannel >scanChannelsCount)randomChannel = 1;
             if (i>200) break;}
-          ReadChannelFrequency(scanChannel[randomChannel], rndfreq);
+          rndfreq = gMR_ChannelFrequencyAttributes[scanChannel[randomChannel]].Frequency;
           SETTINGS_SetVfoFrequency(rndfreq);
+          //SETTINGS_UpdateChannel(scanChannel[randomChannel],gTxVfo,1);
           gEeprom.MrChannel[0]     = scanChannel[randomChannel];
 			    gEeprom.ScreenChannel[0] = scanChannel[randomChannel];
+          //gVfoConfigureMode = VFO_CONFIGURE;
+	        //gFlagResetVfos    = true;
           gTxVfo->Modulation = MODULATION_FM;
           gTxVfo->STEP_SETTING = STEP_0_01kHz;
           gRequestSaveChannel = 1;
@@ -657,10 +641,10 @@ static void ToggleRX(bool on) {
     if(!on && SpectrumMonitor == 2) {isListening = 1;return;}
     isListening = on;
     BACKLIGHT_TurnOn();
-    // automatically switch modulation & bw if known Channel
+    // automatically switch modulation & bw if known channel
     if (on && isKnownChannel) {
-        settings.modulationType = ChannelModulation;
-        memmove(rxChannelName, ChannelName, sizeof(rxChannelName));
+        settings.modulationType = channelModulation;
+        memmove(rxChannelName, channelName, sizeof(rxChannelName));
         RADIO_SetModulation(settings.modulationType);
         BK4819_InitAGC(settings.modulationType);
         
@@ -738,7 +722,7 @@ static bool InitScan() {
       }
     if (appMode == CHANNEL_MODE) {
       int currentChannel = scanChannel[0];
-      ReadChannelFrequency(currentChannel, scanInfo.f);
+      scanInfo.f = gMR_ChannelFrequencyAttributes[currentChannel].Frequency; 
     }
     BK4819_SetFilterBandwidth(settings.listenBw, false);
     return scanInitializedSuccessfully;
@@ -1156,16 +1140,14 @@ switch(SpectrumMonitor) {
   }
 }
 
-static void formatHistory(char *buf, uint8_t index, int Channel, uint32_t freq) {
+static void formatHistory(char *buf, uint16_t index, uint16_t channel, uint32_t freq) {
     char freqStr[16];
     snprintf(freqStr, sizeof(freqStr), "%u.%05u", freq/100000, freq%100000);
     RemoveTrailZeros(freqStr);
 
-    if(Channel != -1) {
-      char Name[12];
-      ReadChannelName(Channel,*Name);
+    if(channel != 0xFFFF) {
         snprintf(buf, 19, "%s(%u)", 
-                Name,
+                gMR_ChannelFrequencyAttributes[channel].Name,
                 HCount[index]);
                 
     } else {
@@ -1253,9 +1235,9 @@ static void DrawF(uint32_t f) {
     
     // --- Contexte canal ---
     f = HFreqs[historyListIndex];
-    int ChannelFd = FetchChannelNumber(f);
-    isKnownChannel = (ChannelFd != -1);
-    memmove(rxChannelName, ChannelName, sizeof(rxChannelName));
+    uint16_t channelFd = BOARD_gMR_fetchChannel(f);
+    isKnownChannel = (channelFd != 0XFFFF);
+    memmove(rxChannelName, channelName, sizeof(rxChannelName));
 
     // Buffers
     char line1[19] = "";
@@ -1283,8 +1265,8 @@ static void DrawF(uint32_t f) {
                 snprintf(prefix, sizeof(prefix), "ALL ");
         }
 
-        if (isKnownChannel && ChannelName[0] && isListening) {
-            snprintf(line2, sizeof(line2), "%-3s%s", prefix, ChannelName);
+        if (isKnownChannel && channelName[0] && isListening) {
+            snprintf(line2, sizeof(line2), "%-3s%s", prefix, channelName);
         } else {
             snprintf(line2, sizeof(line2), "%s", prefix);
         }
@@ -1295,7 +1277,7 @@ static void DrawF(uint32_t f) {
 
     if (ShowLines > 3 || !classic) {
         if (f > 0 && historyListIndex <HISTORY_SIZE) {
-          formatHistory(line3, historyListIndex, ChannelFd, f);
+          formatHistory(line3, historyListIndex, channelFd, f);
         }
         else {
             snprintf(line3, sizeof(line3), "0:EMPTY(0)");
@@ -1321,17 +1303,17 @@ static void DrawF(uint32_t f) {
 }
 
 void LookupChannelInfo() {
-    Channel = FetchChannelNumber(peak.f);
-    isKnownChannel = Channel == -1 ? false : true;
+    channel = BOARD_gMR_fetchChannel(peak.f);
+    isKnownChannel = channel == -1 ? false : true;
     if (isKnownChannel){
-      ReadChannelName(Channel, *ChannelName);
+      memmove(channelName, gMR_ChannelFrequencyAttributes[channel].Name, sizeof(channelName));
       LookupChannelModulation();
     }
   }
 
 void LookupChannelModulation() {
 	  uint16_t base;
-		base = 0x2000 + Channel * 16;
+		base = channel * 16;
 
 		uint8_t tmp;
 		uint8_t data[8];
@@ -1341,18 +1323,18 @@ void LookupChannelModulation() {
 		tmp = data[3] >> 4;
 		if (tmp >= MODULATION_UKNOWN)
 			tmp = MODULATION_FM;
-		ChannelModulation = tmp;
+		channelModulation = tmp;
 
 		if (data[4] == 0xFF)
 		{
-			ChannelBandwidth = BK4819_FILTER_BW_WIDE;
+			channelBandwidth = BK4819_FILTER_BW_WIDE;
 		}
 		else
 		{
 			const uint8_t d4 = data[4];
-			ChannelBandwidth = !!((d4 >> 1) & 1u);
-			if(ChannelBandwidth != BK4819_FILTER_BW_WIDE)
-				ChannelBandwidth = ((d4 >> 5) & 3u) + 1;
+			channelBandwidth = !!((d4 >> 1) & 1u);
+			if(channelBandwidth != BK4819_FILTER_BW_WIDE)
+				channelBandwidth = ((d4 >> 5) & 3u) + 1;
 		}	
 
 }
@@ -1399,7 +1381,7 @@ static void NextScanStep() {
     { 
       int currentChannel = scanChannel[scanInfo.i];
       settings.rssiTriggerLevelUp = SLRssiTriggerLevelUp[ScanListNumber[scanInfo.i]];
-      ReadChannelFrequency(currentChannel, scanInfo.f);
+      scanInfo.f =  gMR_ChannelFrequencyAttributes[currentChannel].Frequency;
     } 
     else {
           // frequency mode
@@ -1545,7 +1527,7 @@ static void OnKeyDown(uint8_t key) {
                 
                 break;
 #ifdef ENABLE_SCANLIST_SHOW_DETAIL
-            case KEY_STAR: // NOWA OBSŁUGA - Show Channels in selected scanlist
+            case KEY_STAR: // NOWA OBSŁUGA - Show channels in selected scanlist
                 selectedScanListIndex = scanListSelectedIndex;
                 BuildScanListChannels(validScanListIndices[selectedScanListIndex]);
                 scanListChannelsSelectedIndex = 0;
@@ -1590,7 +1572,7 @@ static void OnKeyDown(uint8_t key) {
         return; // Finish handling if we were in SCAN_LIST_SELECT
       }
       	  
-	// If we're in scanlist Channels mode, use dedicated key logic
+	// If we're in scanlist channels mode, use dedicated key logic
 #ifdef ENABLE_SCANLIST_SHOW_DETAIL
   if (currentState == SCANLIST_CHANNELS) {
     switch (key) {
@@ -1612,7 +1594,7 @@ static void OnKeyDown(uint8_t key) {
             
         }
         break;
-    case KEY_EXIT: // Exit scanlist Channels back to scanlist selection
+    case KEY_EXIT: // Exit scanlist channels back to scanlist selection
         SetState(SCANLIST_SELECT);
         
         break;
@@ -2371,7 +2353,7 @@ static void Tick() {
   }
 
   if(!isListening && gIsPeak) {
-     //LookupChannelInfo();
+     LookupChannelInfo();
      SetF(peak.f);
      ToggleRX(true);
      return;
@@ -2395,7 +2377,7 @@ static void Tick() {
 void APP_RunSpectrum(uint8_t Spectrum_state) {
   Mode mode;
   if (StorePtt_Toggle_Mode) Ptt_Toggle_Mode = StorePtt_Toggle_Mode;
-  // Spectrum_state 1: MR Channel, 2: band scan, 3: range scan, 4: basic spectrum, 5:new scan range 0: no spectrum
+  // Spectrum_state 1: MR channel, 2: band scan, 3: range scan, 4: basic spectrum, 5:new scan range 0: no spectrum
   if (Spectrum_state == 4) mode = FREQUENCY_MODE ;
   if (Spectrum_state == 3) mode = SCAN_RANGE_MODE ;
   if (Spectrum_state == 2) mode = SCAN_BAND_MODE ;
@@ -2447,27 +2429,27 @@ void LoadValidMemoryChannels(void)
       if (CurrentScanList <= 15 && settings.scanListEnabled[CurrentScanList-1])
         listsEnabled = true;
       
-      // break if some lists were enabled, else scan all Channels
+      // break if some lists were enabled, else scan all channels
       if (CurrentScanList > 15 && listsEnabled)
         break;
 
-      uint8_t offset = scanChannelsCount;
-      uint8_t listChannelsCount = RADIO_ValidMemoryChannelsCount(listsEnabled, CurrentScanList-1);
+      uint16_t offset = scanChannelsCount;
+      uint16_t listChannelsCount = RADIO_ValidMemoryChannelsCount(listsEnabled, CurrentScanList-1);
       scanChannelsCount += listChannelsCount;
-      signed int ChannelIndex=-1;
-      for(int i=0; i < listChannelsCount; i++)
+      uint16_t channelIndex = 0xFFFF;
+      for(uint16_t i=0; i < listChannelsCount; i++)
       {
         uint16_t nextChannel;
-        nextChannel = RADIO_FindNextChannel((ChannelIndex)+1, 1, listsEnabled, CurrentScanList-1);
+        nextChannel = RADIO_FindNextChannel((channelIndex)+1, 1, listsEnabled, CurrentScanList-1);
 
         if (nextChannel == 0xFFFF)
-        {	// no valid Channel found
+        {	// no valid channel found
           break;
         }
         else
         {
-          ChannelIndex = nextChannel;
-          scanChannel[offset+i]=ChannelIndex;
+          channelIndex = nextChannel;
+          scanChannel[offset+i]=channelIndex;
           ScanListNumber[offset+i]=CurrentScanList;
         }
       }
@@ -2611,32 +2593,31 @@ static void ClearSettings()
 
 static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
     ChannelAttributes_t att;
-    char Channel_name[12];
-    int first_Channel = -1;
-    int Channel_count = 0;
+    char channel_name[12];
+    uint16_t first_channel = 0XFFFF;
+    uint16_t channel_count = 0;
 
     // Szukaj kanału należącego do tej scanlisty i licz kanały
-    for (int i = 0; i < 200; i++) {
+    for (uint16_t i = 0; i < MR_CHANNEL_LAST; i++) {
       att = gMR_ChannelAttributes[i];
         if (att.scanlist == scanListIndex + 1) {
-            if (first_Channel == -1)
-                first_Channel = i;
-            Channel_count++;
+            if (first_channel == 0XFFFF)
+                first_channel = i;
+            channel_count++;
         }
     }
-    if (first_Channel == -1)
+    if (first_channel == 0XFFFF)
         return false; // Brak kanałów
 
-    SETTINGS_FetchChannelName(Channel_name, first_Channel);
-    if (Channel_name[0] == '\0') {
-        uint32_t freq;
-        ReadChannelFrequency(first_Channel, freq);
+    SETTINGS_FetchChannelName(channel_name, first_channel);
+    if (channel_name[0] == '\0') {
+        uint32_t freq = gMR_ChannelFrequencyAttributes[first_channel].Frequency;
         char freqStr[12];
         sprintf(freqStr, "%u.%05u", freq / 100000, freq % 100000);
         RemoveTrailZeros(freqStr);
         sprintf(bufferOut, "%2d:%s%s", scanListIndex + 1, freqStr, settings.scanListEnabled[scanListIndex] ? " *" : "");
     } else {
-        sprintf(bufferOut, "%2d:%s%s", scanListIndex + 1, Channel_name, settings.scanListEnabled[scanListIndex] ? " *" : "");
+        sprintf(bufferOut, "%2d:%s%s", scanListIndex + 1, channel_name, settings.scanListEnabled[scanListIndex] ? " *" : "");
     }
     return true;
 }
@@ -2732,15 +2713,13 @@ static void GetHistoryItemText(uint8_t index, char* buffer) {
     sprintf(freqStr, "%u.%05u", HFreqs[index] / 100000, HFreqs[index] % 100000);
     RemoveTrailZeros(freqStr);
     
-    int Channel = FetchChannelNumber(HFreqs[index]);
+    uint16_t channel = BOARD_gMR_fetchChannel(HFreqs[index]);
     
-    if (Channel != -1) {
-        char Name[12];
-        ReadChannelName(Channel, *Name);
+    if (channel != 0XFFFF) {
         sprintf(buffer, "%s%s:%d", 
                 HBlacklisted[index] ? "#" : "",
-                Name,
-                freqStr,
+                gMR_ChannelFrequencyAttributes[channel].Name,
+                //freqStr,
                 HCount[index]);
     } else {
         sprintf(buffer, "%s%s:%d", 
@@ -2929,11 +2908,11 @@ static void RenderScanListChannelsDoubleLines(const char* title, uint8_t numItem
         uint8_t itemIndex = i + scrollOffset;
         if (itemIndex >= numItems) break;
         
-        uint16_t ChannelIndex = scanListChannels[itemIndex];
-        char Channel_name[12];
-        SETTINGS_FetchChannelName(Channel_name, ChannelIndex);
-        uint32_t freq;
-        ReadChannelFrequency(ChannelIndex, freq);
+        uint16_t channelIndex = scanListChannels[itemIndex];
+        char channel_name[12];
+        SETTINGS_FetchChannelName(channel_name, channelIndex);
+        
+        uint32_t freq = gMR_ChannelFrequencyAttributes[channelIndex].Frequency;
         char freqStr[16];
         sprintf(freqStr, "... %u.%05u", freq/100000, freq%100000);
         RemoveTrailZeros(freqStr);
@@ -2943,10 +2922,10 @@ static void RenderScanListChannelsDoubleLines(const char* title, uint8_t numItem
         
         char nameText[20], freqText[20];
         if (itemIndex == selectedIndex) {
-            sprintf(nameText, ">%3d: %s", ChannelIndex + 1, Channel_name);
+            sprintf(nameText, ">%3d: %s", channelIndex + 1, channel_name);
             sprintf(freqText, " %s", freqStr);
         } else {
-            sprintf(nameText, " %3d: %s", ChannelIndex + 1, Channel_name);
+            sprintf(nameText, " %3d: %s", channelIndex + 1, channel_name);
             sprintf(freqText, " %s", freqStr);
         }
         
