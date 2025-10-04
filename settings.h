@@ -183,7 +183,7 @@ void SETTINGS_SaveVfoIndices(void);
 void SETTINGS_SaveSettings(void);
 void SETTINGS_SaveChannel(uint16_t Channel, const VFO_Info_t *pVFO, uint8_t Mode);
 void SETTINGS_SaveChannelName(uint16_t Channel, const char * name);
-void SETTINGS_FetchChannelName(char *s, const int16_t Channel);
+void SETTINGS_FetchChannelName(char *s, const uint16_t Channel);
 void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration);
 void SETTINGS_UpdateChannel(uint16_t Channel, const VFO_Info_t *pVFO, bool keep);
 void SETTINGS_SetVfoFrequency(uint32_t frequency);

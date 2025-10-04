@@ -600,7 +600,7 @@ void BOARD_EEPROM_Init(void)
 
 }
 #ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
-// Load channel frequencies, names into global memory lookup table
+// Load Channel frequencies, names into global memory lookup table
 void BOARD_gMR_LoadChannels() {
 	uint16_t  i;
 	uint32_t freq_buf;
@@ -685,7 +685,7 @@ uint32_t BOARD_fetchChannelFrequency(const uint16_t Channel)
 			if (gMR_ChannelFrequencyAttributes[i].Frequency == freq)
 				return i;
 		}
-		// Return if no channel found
+		// Return if no Channel found
 		return 0xFFFF;
 	}
 #endif

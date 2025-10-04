@@ -181,6 +181,10 @@ void SETTINGS_SaveChannel(uint16_t Channel, const VFO_Info_t *pVFO, uint8_t Mode
 					if (Mode >= 3) {
 						SETTINGS_SaveChannelName(Channel, pVFO->Name);
 
+						#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
+							//update Channel names stored in memory
+							BOARD_gMR_LoadChannels();
+						#endif
 					}
 				#endif
 			}
@@ -210,7 +214,7 @@ void SETTINGS_SaveChannelName(uint16_t Channel, const char * name)
 }
 
 
-void SETTINGS_FetchChannelName(char *s, const int16_t Channel)
+void SETTINGS_FetchChannelName(char *s, const uint16_t Channel)
 {
 	int i;
 
@@ -219,7 +223,7 @@ void SETTINGS_FetchChannelName(char *s, const int16_t Channel)
 
 	memset(s, 0, 11);  // 's' had better be large enough !
 
-	if (Channel < 0)
+	if (Channel == 0xFFFF)
 		return;
 
 	if (!RADIO_CheckValidChannel(Channel, false, 0))
