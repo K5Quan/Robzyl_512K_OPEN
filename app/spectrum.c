@@ -1313,7 +1313,7 @@ void LookupChannelInfo() {
 
 void LookupChannelModulation() {
 	  uint16_t base;
-		base = Channel * 16;
+		base = 0x2000 + Channel * 16;
 
 		uint8_t tmp;
 		uint8_t data[8];

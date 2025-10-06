@@ -48,9 +48,7 @@ void SETTINGS_SaveSettings(void)
 
 	State[1] = gEeprom.SQUELCH_LEVEL;
 	State[2] = gEeprom.TX_TIMEOUT_TIMER;
-
-		State[3] = false;
-
+	State[3] = false;
 	State[4] = gEeprom.KEY_LOCK;
 	State[5] = false;
 	State[6] = 0;

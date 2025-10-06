@@ -36,14 +36,11 @@ is_free:1,
 band:3;
 } ch_attr[1000];
 
-#seekto 0xe40;
-ul16 fmfreq[20];
-
 #seekto 0xe70;
-u8 call_channel;
+u8 unused;
 u8 squelch;
 u8 max_talk_time;
-u8 noaa_autoscan;
+u8 unused;
 u8 key_lock;
 u8 mic_gain;
 
@@ -52,7 +49,7 @@ u8 backlight_min:4,
 backlight_max:4;
 
 u8 channel_display_mode;
-u8 crossband;
+u8 unused;
 u8 battery_save;
 u8 backlight_time;
 u8 ste;
@@ -121,30 +118,13 @@ u8 sl2PriorEnab;
 u8 sl2PriorCh1;
 u8 sl2PriorCh2;
 
-#seekto 0xf40;
-u8 int_flock;
-u8 int_350tx;
-u8 int_KILLED;
-u8 int_200tx;
-u8 int_500tx;
-u8 int_350en;
-u8 int_scren;
-
-
+#seekto 0xf47;
 u8  backlight_on_TX_RX:2,
     AM_fix:1,
     mic_bar:1,
     battery_text:2,
-    live_DTMF_decoder:1,
+    unused:1,
     unknown:1;
-
-  
-#seekto 0x1c00;
-struct {
-char name[8];
-char number[3];
-#seek 5;
-} dtmfcontact[16];
 
 struct {
     struct {
@@ -263,9 +243,6 @@ POWER_HIGH = 0b10
 POWER_MEDIUM = 0b01
 POWER_LOW = 0b00
 
-# dtmf_flags
-PTTID_LIST = ["OFF", "UP CODE", "DOWN CODE", "UP+DOWN CODE", "APOLLO QUINDAR"]
-
 # power
 UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
                      chirp_common.PowerLevel("Med",  watts=3.00),
@@ -370,13 +347,6 @@ BANDS_WIDE = {
 
 SCANLIST_LIST = ["None", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
 SCANLIST_SELECT_LIST = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
-
-DTMF_CHARS = "0123456789ABCD*# "
-DTMF_CHARS_ID = "0123456789ABCDabcd"
-DTMF_CHARS_KILL = "0123456789ABCDabcd"
-DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
-DTMF_CODE_CHARS = "ABCD*# "
-DTMF_DECODE_RESPONSE_LIST = ["DO NOTHING", "RING", "REPLY", "BOTH"]
 
 KEYACTIONS_LIST = ["NONE",
                    "FLASH LIGHT",
@@ -1246,11 +1216,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpsq = min_max_def(_mem.squelch, 0, 9, 1)
         val = RadioSettingValueInteger(0, 9, tmpsq)
         squelch_setting = RadioSetting("squelch", "Squelch (Sql)", val)
-
-        tmpc = min_max_def(_mem.call_channel + 1, 1, 200, 1)
-        val = RadioSettingValueInteger(1, 200, tmpc)
-        call_channel_setting = RadioSetting("call_channel",
-                                            "One key call channel", val)
 
         val = RadioSettingValueBoolean(_mem.key_lock)
         keypad_cock_setting = RadioSetting("key_lock", "Keypad locked", val)
