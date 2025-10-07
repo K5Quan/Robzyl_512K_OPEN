@@ -68,16 +68,16 @@ bool gCurrentTxState = false;
 static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 static void FlashlightTimeSlice();
 
-static void UpdateRSSI(const int vfo)
+static void UpdateRSSI()
 {
     int16_t rssi = BK4819_GetRSSI();
     
-    if (gCurrentRSSI[vfo] == rssi)
+    if (gCurrentRSSI == rssi)
         return;     // no change
 
     //rssiScope[SCOPE_WIDTH - 1] = rssi;
 
-    gCurrentRSSI[vfo] = rssi;
+    gCurrentRSSI = rssi;
 	
 
 }
@@ -132,7 +132,7 @@ void UpdateAndDrawGlitchScope(void)
 void DrawNumeric(void)
 {
     int pos=0;
-	uint16_t rssi  = gCurrentRSSI[0];
+	uint16_t rssi  = gCurrentRSSI;
     uint8_t glitch = BK4819_GetGlitchIndicator();
     uint16_t noise = BK4819_GetExNoiseIndicator();
 	
@@ -183,7 +183,7 @@ static void CheckForIncoming(void)
 				FUNCTION_Select(FUNCTION_INCOMING);
 				//gUpdateDisplay = true;
 
-				UpdateRSSI(0);
+				UpdateRSSI();
 				gUpdateRSSI = true;
 			}
 			return;
@@ -194,7 +194,7 @@ static void CheckForIncoming(void)
 		FUNCTION_Select(FUNCTION_INCOMING);
 		//gUpdateDisplay = true;
 
-		UpdateRSSI(0);
+		UpdateRSSI();
 		gUpdateRSSI = true;
 	}
 }
@@ -204,7 +204,7 @@ void APP_TimeSliceScope(void) {
 	if (gScreenToDisplay == DISPLAY_MAIN)
 	{
 	DrawNumeric();
-	DrawLevelBar(gCurrentRSSI[0],120,380);
+	DrawLevelBar(gCurrentRSSI,120,380);
 	ST7565_BlitFullScreen();
 	}
 }
@@ -608,7 +608,7 @@ void APP_Update(void)
 		if ( gCssBackgroundScan || gUpdateRSSI)
 		{	// dual watch mode off or scanning or rssi update request
 
-			UpdateRSSI(0);
+			UpdateRSSI();
 
 			// go back to sleep
 
@@ -971,7 +971,7 @@ void APP_TimeSlice500ms(void)
 	}
 
 	if (gCurrentFunction != FUNCTION_POWER_SAVE && gCurrentFunction != FUNCTION_TRANSMIT)
-		UpdateRSSI(0);
+		UpdateRSSI();
 
 	if (!gPttIsPressed && gVFOStateResumeCountdown_500ms > 0)
 	{

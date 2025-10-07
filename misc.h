@@ -45,7 +45,7 @@
 
 enum {
 	MR_CHANNEL_FIRST   = 0,
-	MR_CHANNEL_LAST    = 499u,
+	MR_CHANNEL_LAST    = 199u,
 	FREQ_CHANNEL_FIRST = MR_CHANNEL_LAST+1,
 	FREQ_CHANNEL_LAST  = MR_CHANNEL_LAST+7,
 	LAST_CHANNEL
@@ -273,7 +273,7 @@ extern volatile bool         gNextTimeslice_10ms;
 extern volatile bool         gFlagTailNoteEliminationComplete;
 extern volatile uint8_t      gVFOStateResumeCountdown_500ms;
 extern volatile bool     gScheduleFM;
-extern int16_t               gCurrentRSSI[2];   // now one per VFO
+extern int16_t               gCurrentRSSI;   // now one per VFO
 extern uint8_t               gIsLocked;
 extern volatile uint8_t      boot_counter_10ms;
 

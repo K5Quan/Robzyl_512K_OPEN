@@ -97,9 +97,9 @@ typedef enum ROGER_Mode_t ROGER_Mode_t;
 typedef enum CHANNEL_DisplayMode_t CHANNEL_DisplayMode_t;
 
 typedef struct {
-	uint16_t               ScreenChannel[2]; // current Channels set in the radio (memory or frequency Channels)
-	uint16_t               FreqChannel[2]; // last frequency Channels used
-	uint16_t               MrChannel[2]; // last memory Channels used
+	uint16_t               ScreenChannel; // current Channels set in the radio (memory or frequency Channels)
+	uint16_t               FreqChannel; // last frequency Channels used
+	uint16_t               MrChannel; // last memory Channels used
 	// The actual VFO index (0-upper/1-lower) that is now used for RX, 
 	// It is being alternated by dual watch, and flipped by crossband
 	uint8_t               RX_VFO;
@@ -122,8 +122,7 @@ typedef struct {
 	uint8_t               SCAN_RESUME_MODE;
 	uint8_t               SCAN_LIST_DEFAULT;
 	bool                  SCAN_LIST_ENABLED[2];
-	uint8_t               SCANLIST_PRIORITY_CH1[2];
-	uint8_t               SCANLIST_PRIORITY_CH2[2];
+	
 
 	uint8_t               field29_0x26;
 	uint8_t               field30_0x27;
@@ -152,7 +151,7 @@ typedef struct {
 	uint8_t               VOLUME_GAIN;
 	uint8_t               DAC_GAIN;
 
-	VFO_Info_t            VfoInfo[2];
+	VFO_Info_t            VfoInfo;
 #ifdef ENABLE_PWRON_PASSWORD
 	uint32_t              POWER_ON_PASSWORD;
 	uint8_t				  PASSWORD_WRONG_ATTEMPTS;

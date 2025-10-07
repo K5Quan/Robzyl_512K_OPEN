@@ -525,10 +525,10 @@ void BOARD_EEPROM_Init(void)
 
 	// 0E80..0E87
 	EEPROM_ReadBuffer(0x0E80, Data, 8);
-	gEeprom.ScreenChannel[0]   = IS_VALID_CHANNEL(Data[0]) ? Data[0] : (FREQ_CHANNEL_FIRST + BAND6_400MHz);
+	gEeprom.ScreenChannel   = IS_VALID_CHANNEL(Data[0]) ? Data[0] : (FREQ_CHANNEL_FIRST + BAND6_400MHz);
 	
-	gEeprom.MrChannel[0]       = IS_MR_CHANNEL(Data[1])    ? Data[1] : MR_CHANNEL_FIRST;
-	gEeprom.FreqChannel[0]     = IS_FREQ_CHANNEL(Data[2])  ? Data[2] : (FREQ_CHANNEL_FIRST + BAND6_400MHz);
+	gEeprom.MrChannel       = IS_MR_CHANNEL(Data[1])    ? Data[1] : MR_CHANNEL_FIRST;
+	gEeprom.FreqChannel     = IS_FREQ_CHANNEL(Data[2])  ? Data[2] : (FREQ_CHANNEL_FIRST + BAND6_400MHz);
 	
 	EEPROM_ReadBuffer(0x0E88, Data, 8);
 	memmove(&gEeprom.FM_FrequencyPlaying, Data, 2);
@@ -582,10 +582,9 @@ void BOARD_EEPROM_Init(void)
 
 	if (!gEeprom.VFO_OPEN)
 	{
-		gEeprom.ScreenChannel[0] = gEeprom.MrChannel[0];
+		gEeprom.ScreenChannel = gEeprom.MrChannel;
 	}
 
-	// 0D60..0E27
 	EEPROM_ReadBuffer(0x0000, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
 	for(uint16_t i = 0; i < sizeof(gMR_ChannelAttributes); i++) {
 		ChannelAttributes_t *att = &gMR_ChannelAttributes[i];
@@ -594,10 +593,6 @@ void BOARD_EEPROM_Init(void)
 			att->band = 0xf;
 		}
 	}
-	#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
-		BOARD_gMR_LoadChannels();
-	#endif
-
 }
 #ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
 // Load Channel frequencies, names into global memory lookup table
@@ -678,18 +673,6 @@ uint32_t BOARD_fetchChannelFrequency(const uint16_t Channel)
 
 	return info.frequency;
 }
-#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
-	uint16_t BOARD_gMR_fetchChannel(const uint32_t freq)
-	{
-		for (uint16_t i = MR_CHANNEL_FIRST; i <= MR_CHANNEL_LAST; i++) {
-			if (gMR_ChannelFrequencyAttributes[i].Frequency == freq)
-				return i;
-		}
-		// Return if no Channel found
-		return 0xFFFF;
-	}
-#endif
-
 
 void BOARD_FactoryReset()
 {

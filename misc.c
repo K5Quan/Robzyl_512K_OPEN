@@ -182,7 +182,7 @@ volatile bool gScheduleFM;
 
 volatile uint8_t  boot_counter_10ms;
 
-int16_t           gCurrentRSSI[2] = {0, 0};  // now one per VFO
+int16_t           gCurrentRSSI = 0;  // now one per VFO
 
 uint8_t           gIsLocked = 0xFF;
 

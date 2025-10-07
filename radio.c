@@ -129,19 +129,19 @@ void RADIO_InitInfo(VFO_Info_t *pInfo, const uint16_t ChannelSave, const uint32_
 
 void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure)
 {
-	VFO_Info_t *pVfo = &gEeprom.VfoInfo[VFO];
-	uint16_t Channel = gEeprom.ScreenChannel[VFO];
+	VFO_Info_t *pVfo = &gEeprom.VfoInfo;
+	uint16_t Channel = gEeprom.ScreenChannel;
 
 	if (IS_VALID_CHANNEL(Channel)) {
 		if (IS_MR_CHANNEL(Channel)) {
 			Channel = RADIO_FindNextChannel(Channel, RADIO_CHANNEL_UP, false, VFO);
 			if (Channel == 0xFFFF) {
-				Channel                    = gEeprom.FreqChannel[VFO];
-				gEeprom.ScreenChannel[VFO] = gEeprom.FreqChannel[VFO];
+				Channel                    = gEeprom.FreqChannel;
+				gEeprom.ScreenChannel = gEeprom.FreqChannel;
 			}
 			else {
-				gEeprom.ScreenChannel[VFO] = Channel;
-				gEeprom.MrChannel[VFO]     = Channel;
+				gEeprom.ScreenChannel = Channel;
+				gEeprom.MrChannel     = Channel;
 			}
 		}
 	}
@@ -151,8 +151,8 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
 	ChannelAttributes_t att = gMR_ChannelAttributes[Channel];
 	if (att.__val == 0xFF) { // invalid/unused Channel
 		if (IS_MR_CHANNEL(Channel)) {
-			Channel                    = gEeprom.FreqChannel[VFO];
-			gEeprom.ScreenChannel[VFO] = Channel;
+			Channel                    = gEeprom.FreqChannel;
+			gEeprom.ScreenChannel = Channel;
 		}
 
 		uint16_t bandIdx = Channel - FREQ_CHANNEL_FIRST;
@@ -479,7 +479,7 @@ void RADIO_ApplyTxOffset(VFO_Info_t *pInfo)
 
 void RADIO_SelectVfos(void)
 {
-	gTxVfo = &gEeprom.VfoInfo[0];
+	gTxVfo = &gEeprom.VfoInfo;
 	gCurrentVfo = gTxVfo;
 }
 

@@ -1,7 +1,7 @@
 #include "app/spectrum.h"
 #include "scanner.h"
 #include "driver/backlight.h"
-#include "driver/eeprom.h"   // EEPROM_ReadBuffer()
+#include "driver/eeprom.h"
 
 #include "ui/helper.h"
 #include "common.h"
@@ -94,7 +94,7 @@ uint8_t refresh = 0;
 Mode appMode;
 #define UHF_NOISE_FLOOR 20
 
-uint8_t scanChannel[MR_CHANNEL_LAST + 3];
+uint16_t scanChannel[MR_CHANNEL_LAST + 3];
 uint8_t ScanListNumber[MR_CHANNEL_LAST + 3];
 
 //uint8_t scanChannel[MR_CHANNEL_LAST+3];
@@ -520,8 +520,8 @@ if (historyListActive == true){
           rndfreq = gMR_ChannelFrequencyAttributes[scanChannel[randomChannel]].Frequency;
           SETTINGS_SetVfoFrequency(rndfreq);
           //SETTINGS_UpdateChannel(scanChannel[randomChannel],gTxVfo,1);
-          gEeprom.MrChannel[0]     = scanChannel[randomChannel];
-			    gEeprom.ScreenChannel[0] = scanChannel[randomChannel];
+          gEeprom.MrChannel     = scanChannel[randomChannel];
+			    gEeprom.ScreenChannel = scanChannel[randomChannel];
           //gVfoConfigureMode = VFO_CONFIGURE;
 	        //gFlagResetVfos    = true;
           gTxVfo->Modulation = MODULATION_FM;
@@ -1218,6 +1218,27 @@ static void BuildEnabledScanLists(char *buf, size_t buflen) {
     }
 }
 
+void ReadChannelFrequency(uint16_t Channel, uint32_t *frequency) {
+    EEPROM_ReadBuffer(0x2000 + Channel * 16, (uint8_t *)frequency, 4);
+}
+
+void ReadChannelName(uint16_t Channel, char *name) {
+    EEPROM_ReadBuffer(0x5E80 + Channel * 16, (uint8_t *)name, 16);
+}
+
+uint16_t FetchChannelNumber(uint32_t frequency) {
+    uint32_t f;
+    for (int i = MR_CHANNEL_FIRST; i <= MR_CHANNEL_LAST; i++) {
+        ReadChannelFrequency(i, &f);
+        if (f == 0xFFFFFFFF || f == 0x00000000)
+            continue;
+        if (f == frequency)
+            return i;
+    }
+    return 0xFFFF;
+}
+
+
 static void DrawF(uint32_t f) {
     if (HandlePopup()) return;
     if (f == 0) return;
@@ -1235,7 +1256,7 @@ static void DrawF(uint32_t f) {
     
     // --- Contexte canal ---
     f = HFreqs[historyListIndex];
-    uint16_t ChannelFd = BOARD_gMR_fetchChannel(f);
+    uint16_t ChannelFd = FetchChannelNumber(f);
     isKnownChannel = (ChannelFd != 0XFFFF);
     memmove(rxChannelName, ChannelName, sizeof(rxChannelName));
 
@@ -1301,15 +1322,6 @@ static void DrawF(uint32_t f) {
         UI_PrintString(line3, 1, 1, 4, 8);
     }
 }
-
-void LookupChannelInfo() {
-    Channel = BOARD_gMR_fetchChannel(peak.f);
-    isKnownChannel = Channel == -1 ? false : true;
-    if (isKnownChannel){
-      memmove(ChannelName, gMR_ChannelFrequencyAttributes[Channel].Name, sizeof(ChannelName));
-      LookupChannelModulation();
-    }
-  }
 
 void LookupChannelModulation() {
 	  uint16_t base;
@@ -2353,7 +2365,6 @@ static void Tick() {
   }
 
   if(!isListening && gIsPeak) {
-     LookupChannelInfo();
      SetF(peak.f);
      ToggleRX(true);
      return;
@@ -2713,7 +2724,7 @@ static void GetHistoryItemText(uint8_t index, char* buffer) {
     sprintf(freqStr, "%u.%05u", HFreqs[index] / 100000, HFreqs[index] % 100000);
     RemoveTrailZeros(freqStr);
     
-    uint16_t Channel = BOARD_gMR_fetchChannel(HFreqs[index]);
+    uint16_t Channel = FetchChannelNumber(HFreqs[index]);
     
     if (Channel != 0XFFFF) {
         sprintf(buffer, "%s%s:%d", 

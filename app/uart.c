@@ -316,10 +316,10 @@ static void CMD_052F(const uint8_t *pBuffer)
 {
 	const CMD_052F_t *pCmd = (const CMD_052F_t *)pBuffer;
 	
-	gEeprom.VfoInfo[0].FrequencyReverse              = false;
-	gEeprom.VfoInfo[0].pRX                           = &gEeprom.VfoInfo[0].freq_config_RX;
-	gEeprom.VfoInfo[0].pTX                           = &gEeprom.VfoInfo[0].freq_config_TX;
-	gEeprom.VfoInfo[0].TX_OFFSET_FREQUENCY_DIRECTION = TX_OFFSET_FREQUENCY_DIRECTION_OFF;
+	gEeprom.VfoInfo.FrequencyReverse              = false;
+	gEeprom.VfoInfo.pRX                           = &gEeprom.VfoInfo.freq_config_RX;
+	gEeprom.VfoInfo.pTX                           = &gEeprom.VfoInfo.freq_config_TX;
+	gEeprom.VfoInfo.TX_OFFSET_FREQUENCY_DIRECTION = TX_OFFSET_FREQUENCY_DIRECTION_OFF;
 
 	if (gCurrentFunction == FUNCTION_POWER_SAVE)
 		FUNCTION_Select(FUNCTION_FOREGROUND);

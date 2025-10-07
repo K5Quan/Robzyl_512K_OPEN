@@ -36,9 +36,9 @@ void SETTINGS_SaveVfoIndices(void)
 
 	EEPROM_ReadBuffer(0x0E80, State, sizeof(State));
 
-	State[0] = gEeprom.ScreenChannel[0];
-	State[1] = gEeprom.MrChannel[0];
-	State[2] = gEeprom.FreqChannel[0];
+	State[0] = gEeprom.ScreenChannel;
+	State[1] = gEeprom.MrChannel;
+	State[2] = gEeprom.FreqChannel;
 	EEPROM_WriteBuffer(0x0E80, State);
 }
 
@@ -98,22 +98,6 @@ void SETTINGS_SaveSettings(void)
 	State[4] = gEeprom.BATTERY_TYPE;
 	State[5] = gEeprom.SQL_TONE;
 	EEPROM_WriteBuffer(0x0EA8, State);
-
-	
-
-
-	EEPROM_WriteBuffer(0x0ED8, State);
-
-	State[0] = gEeprom.SCAN_LIST_DEFAULT;
-	State[1] = gEeprom.SCAN_LIST_ENABLED[0];
-	State[2] = gEeprom.SCANLIST_PRIORITY_CH1[0];
-	State[3] = gEeprom.SCANLIST_PRIORITY_CH2[0];
-	State[4] = gEeprom.SCAN_LIST_ENABLED[1];
-	State[5] = gEeprom.SCANLIST_PRIORITY_CH1[1];
-	State[6] = gEeprom.SCANLIST_PRIORITY_CH2[1];
-	State[7] = 0xFF;
-	EEPROM_WriteBuffer(0x0F18, State);
-
 	memset(State, 0xFF, sizeof(State));
 	State[0]  = gSetting_F_LOCK;
 	State[6]  = gSetting_ScrambleEnable;
@@ -178,11 +162,6 @@ void SETTINGS_SaveChannel(uint16_t Channel, const VFO_Info_t *pVFO, uint8_t Mode
 				#else
 					if (Mode >= 3) {
 						SETTINGS_SaveChannelName(Channel, pVFO->Name);
-
-						#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
-							//update Channel names stored in memory
-							BOARD_gMR_LoadChannels();
-						#endif
 					}
 				#endif
 			}
@@ -299,8 +278,8 @@ void SETTINGS_SetVfoFrequency(uint32_t frequency) {
 		if (gTxVfo->Band != band)
 		{
 			gTxVfo->Band               = band;
-			gEeprom.ScreenChannel[Vfo] = band + FREQ_CHANNEL_FIRST;
-			gEeprom.FreqChannel[Vfo]   = band + FREQ_CHANNEL_FIRST;
+			gEeprom.ScreenChannel = band + FREQ_CHANNEL_FIRST;
+			gEeprom.FreqChannel   = band + FREQ_CHANNEL_FIRST;
 
 			SETTINGS_SaveVfoIndices();
 
