@@ -203,8 +203,7 @@ void SETTINGS_FetchChannelName(char *s, const uint16_t Channel)
 	if (Channel == 0xFFFF)
 		return;
 
-	if (!RADIO_CheckValidChannel(Channel, false, 0))
-		return;
+	if (!RADIO_CheckValidChannel(Channel)) return;
 
 
 	EEPROM_ReadBuffer(0x5E80 + (Channel * 16), s + 0, 8);
@@ -242,7 +241,7 @@ void SETTINGS_UpdateChannel(uint16_t Channel, const VFO_Info_t *pVFO, bool keep)
 		state[Channel & 7u] = att.__val;
 		EEPROM_WriteBuffer(offset, state);
 
-		gMR_ChannelAttributes[Channel] = att;
+		//gMR_ChannelAttributes = att;
 
 		if (IS_MR_CHANNEL(Channel)) {	// it's a memory Channel
 			if (!keep) {
@@ -254,8 +253,6 @@ void SETTINGS_UpdateChannel(uint16_t Channel, const VFO_Info_t *pVFO, bool keep)
 }
 
 void SETTINGS_SetVfoFrequency(uint32_t frequency) {
-	const uint8_t Vfo = 0;
-	// clamp the frequency entered to some valid value
 	if (frequency < RX_freq_min())
 	{
 		frequency = RX_freq_min();
@@ -283,7 +280,7 @@ void SETTINGS_SetVfoFrequency(uint32_t frequency) {
 
 			SETTINGS_SaveVfoIndices();
 
-			RADIO_ConfigureChannel(Vfo, VFO_CONFIGURE_RELOAD);
+			RADIO_ConfigureChannel(VFO_CONFIGURE_RELOAD);
 		}
 
 		// Autoset stepFrequency based on step setting

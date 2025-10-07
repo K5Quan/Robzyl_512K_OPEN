@@ -585,14 +585,14 @@ void BOARD_EEPROM_Init(void)
 		gEeprom.ScreenChannel = gEeprom.MrChannel;
 	}
 
-	EEPROM_ReadBuffer(0x0000, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
+/* 	EEPROM_ReadBuffer(0x0000, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
 	for(uint16_t i = 0; i < sizeof(gMR_ChannelAttributes); i++) {
 		ChannelAttributes_t *att = &gMR_ChannelAttributes[i];
 		if(att->__val == 0xff){
 			att->__val = 0;
 			att->band = 0xf;
 		}
-	}
+	} */
 }
 #ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
 // Load Channel frequencies, names into global memory lookup table

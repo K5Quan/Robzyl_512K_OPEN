@@ -1304,7 +1304,7 @@ Skip:
 
 	if (gVfoConfigureMode != VFO_CONFIGURE_NONE)
 	{
-		RADIO_ConfigureChannel(0, gVfoConfigureMode);
+		RADIO_ConfigureChannel(gVfoConfigureMode);
 		
 		if (gRequestDisplayScreen == DISPLAY_INVALID)
 			gRequestDisplayScreen = DISPLAY_MAIN;

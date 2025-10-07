@@ -69,7 +69,7 @@ uint16_t          gEEPROM_RSSI_CALIB[7][4];
 uint16_t          gEEPROM_1F8A;
 uint16_t          gEEPROM_1F8C;
 
-ChannelAttributes_t gMR_ChannelAttributes[FREQ_CHANNEL_LAST + 1];
+//ChannelAttributes_t gMR_ChannelAttributes[FREQ_CHANNEL_LAST + 1];
 
 #ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
 ChannelFrequencyAttributes gMR_ChannelFrequencyAttributes[MR_CHANNEL_LAST];

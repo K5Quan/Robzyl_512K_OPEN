@@ -200,7 +200,7 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
 			Channel = ((gInputBox[0] * 100) + (gInputBox[1] * 10) + gInputBox[2]) - 1;
 
-			if (!RADIO_CheckValidChannel(Channel, false, 0))
+			if (!RADIO_CheckValidChannel(Channel))
 			{
 				return;
 			}
@@ -337,7 +337,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 				return;
 			}
 
-			Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
+			Next = RADIO_FindNextChannel(Channel + Direction, Direction);
 			if (Next == 0xFFFF)
 				return;
 

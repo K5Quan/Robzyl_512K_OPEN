@@ -163,7 +163,7 @@ extern ChannelFrequencyAttributes gMR_ChannelFrequencyAttributes[MR_CHANNEL_LAST
          extern volatile uint8_t  gUART_LockScreenshot; // lock screenshot if Chirp is used
 #endif
 
-extern ChannelAttributes_t   gMR_ChannelAttributes[FREQ_CHANNEL_LAST + 1];
+//extern ChannelAttributes_t   gMR_ChannelAttributes[FREQ_CHANNEL_LAST + 1];
 
 typedef struct
 {

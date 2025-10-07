@@ -58,30 +58,30 @@ const char gModulationStr[][4] =
 const char *bwNames[5] = {"25k", "12.5k", "8.33k", "6.25k", "5k"};
 
 
-bool RADIO_CheckValidChannel(uint16_t Channel, bool bCheckScanList, uint8_t VFO)
+bool RADIO_CheckValidChannel(uint16_t Channel)
 {	// return true if the Channel appears valid
 
-	ChannelAttributes_t att;
+	//ChannelAttributes_t att;
 
 	if (!IS_MR_CHANNEL(Channel))
 		return false;
-
+/* 
 	att = gMR_ChannelAttributes[Channel];
 
 	if (att.band > BAND7_470MHz)
 		return false;
 
 	if (bCheckScanList) {
-		if (att.scanlist == VFO+1)
+		if (att.scanlist == 1)
 			return true;
 		else
 			return false;
-	}
+	}*/
 
 	return true;
 }
 
-uint16_t RADIO_FindNextChannel(uint16_t Channel, int8_t Direction, bool bCheckScanList, uint8_t VFO)
+uint16_t RADIO_FindNextChannel(uint16_t Channel, int8_t Direction)
 {
 	unsigned int i;
 		
@@ -93,7 +93,7 @@ uint16_t RADIO_FindNextChannel(uint16_t Channel, int8_t Direction, bool bCheckSc
 		if (!IS_MR_CHANNEL(Channel))
 			Channel = MR_CHANNEL_FIRST;
 
-		if (RADIO_CheckValidChannel(Channel, bCheckScanList, VFO))
+		if (RADIO_CheckValidChannel(Channel))
 			return Channel;
 
 		Channel += Direction;
@@ -127,14 +127,14 @@ void RADIO_InitInfo(VFO_Info_t *pInfo, const uint16_t ChannelSave, const uint32_
 	RADIO_ConfigureSquelchAndOutputPower(pInfo);
 }
 
-void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure)
+void RADIO_ConfigureChannel(const unsigned int configure)
 {
 	VFO_Info_t *pVfo = &gEeprom.VfoInfo;
 	uint16_t Channel = gEeprom.ScreenChannel;
 
 	if (IS_VALID_CHANNEL(Channel)) {
 		if (IS_MR_CHANNEL(Channel)) {
-			Channel = RADIO_FindNextChannel(Channel, RADIO_CHANNEL_UP, false, VFO);
+			Channel = RADIO_FindNextChannel(Channel, RADIO_CHANNEL_UP);
 			if (Channel == 0xFFFF) {
 				Channel                    = gEeprom.FreqChannel;
 				gEeprom.ScreenChannel = gEeprom.FreqChannel;
@@ -148,9 +148,9 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
 	else
 		Channel = FREQ_CHANNEL_LAST - 1;
 
-	ChannelAttributes_t att = gMR_ChannelAttributes[Channel];
-	if (att.__val == 0xFF) { // invalid/unused Channel
-		if (IS_MR_CHANNEL(Channel)) {
+	ChannelAttributes_t att;
+	EEPROM_ReadBuffer(0x0000 + Channel, (uint8_t *)&att, sizeof(att));
+	if (IS_MR_CHANNEL(Channel)) {
 			Channel                    = gEeprom.FreqChannel;
 			gEeprom.ScreenChannel = Channel;
 		}
@@ -158,7 +158,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
 		uint16_t bandIdx = Channel - FREQ_CHANNEL_FIRST;
 		RADIO_InitInfo(pVfo, Channel, frequencyBandTable[bandIdx].lower);
 		return;
-	}
+	
 
 	uint8_t band = att.band;
 	if (band > BAND7_470MHz) {
@@ -168,7 +168,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
 	if (!IS_MR_CHANNEL(Channel)) {
 		band = Channel - FREQ_CHANNEL_FIRST;
 	}
-
+	
 	pVfo->Band                    = band;
 	pVfo->SCANLIST 				  = att.scanlist;
 	pVfo->CHANNEL_SAVE            = Channel;
@@ -177,7 +177,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
 	if (IS_MR_CHANNEL(Channel))
 		base = 0x2000 + Channel * 16;
 	else
-		base = 0x0C80 + ((Channel - FREQ_CHANNEL_FIRST) * 32) + (VFO * 16);
+		base = 0x0C80 + ((Channel - FREQ_CHANNEL_FIRST) * 32);
 
 	if (configure == VFO_CONFIGURE_RELOAD || IS_FREQ_CHANNEL(Channel))
 	{
@@ -788,11 +788,11 @@ void RADIO_SendEndOfTransmission(bool playRoger)
 	if (playRoger) {BK4819_PlayRoger(gEeprom.ROGER);}
 }
 
-uint16_t RADIO_ValidMemoryChannelsCount(bool bCheckScanList, uint8_t VFO)
+uint16_t RADIO_ValidMemoryChannelsCount()
 	{
 		uint16_t count=0;
 		for (uint16_t i = MR_CHANNEL_FIRST; i<=MR_CHANNEL_LAST; ++i) {
-			if(RADIO_CheckValidChannel(i, bCheckScanList, VFO))
+			if(RADIO_CheckValidChannel(i))
 				count++;
 		}
 		return count;

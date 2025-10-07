@@ -26,7 +26,7 @@ void COMMON_SwitchToVFOMode()
 }
 void COMMON_SwitchToChannelMode()
 {
-    uint16_t Channel = RADIO_FindNextChannel(gEeprom.MrChannel, 1, false, 0);
+    uint16_t Channel = RADIO_FindNextChannel(gEeprom.MrChannel, 1);
     if (Channel != 0xFFFF)
     {	// swap to Channel mode
         gEeprom.ScreenChannel = Channel;

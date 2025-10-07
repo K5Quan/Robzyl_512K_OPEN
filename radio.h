@@ -140,10 +140,10 @@ extern VfoState_t     VfoState;
 // determines whether mic should be muted during TX (i.e during FSK modem TX)
 extern bool           gMuteMic;
 
-bool       RADIO_CheckValidChannel(uint16_t ChNum, bool bCheckScanList, uint8_t   RadioNum);
-uint16_t    RADIO_FindNextChannel(uint16_t ChNum, int8_t Direction, bool bCheckScanList, uint8_t   RadioNum);
+bool       RADIO_CheckValidChannel(uint16_t ChNum);
+uint16_t    RADIO_FindNextChannel(uint16_t ChNum, int8_t Direction);
 void       RADIO_InitInfo(VFO_Info_t *pInfo, const uint16_t ChannelSave, const uint32_t Frequency);
-void       RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure);
+void       RADIO_ConfigureChannel(const unsigned int configure);
 void       RADIO_ConfigureSquelchAndOutputPower(VFO_Info_t *pInfo);
 void       RADIO_ApplyTxOffset(VFO_Info_t *pInfo);
 void       RADIO_SelectVfos(void);
@@ -157,5 +157,5 @@ void       RADIO_PrepareCssTX(void);
 void       RADIO_SendEndOfTransmission(bool playRoger);
 #endif
 
-uint16_t RADIO_ValidMemoryChannelsCount(bool bCheckScanList, uint8_t VFO);
+uint16_t RADIO_ValidMemoryChannelsCount();
 

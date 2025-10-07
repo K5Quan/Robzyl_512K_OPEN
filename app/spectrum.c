@@ -516,7 +516,7 @@ if (historyListActive == true){
             {i++;
             randomChannel++;
             if (randomChannel >scanChannelsCount)randomChannel = 1;
-            if (i>200) break;}
+            if (i>MR_CHANNEL_LAST) break;}
           rndfreq = gMR_ChannelFrequencyAttributes[scanChannel[randomChannel]].Frequency;
           SETTINGS_SetVfoFrequency(rndfreq);
           //SETTINGS_UpdateChannel(scanChannel[randomChannel],gTxVfo,1);
@@ -2445,13 +2445,13 @@ void LoadValidMemoryChannels(void)
         break;
 
       uint16_t offset = scanChannelsCount;
-      uint16_t listChannelsCount = RADIO_ValidMemoryChannelsCount(listsEnabled, CurrentScanList-1);
+      uint16_t listChannelsCount = RADIO_ValidMemoryChannelsCount();
       scanChannelsCount += listChannelsCount;
       uint16_t ChannelIndex = 0xFFFF;
       for(uint16_t i=0; i < listChannelsCount; i++)
       {
         uint16_t nextChannel;
-        nextChannel = RADIO_FindNextChannel((ChannelIndex)+1, 1, listsEnabled, CurrentScanList-1);
+        nextChannel = RADIO_FindNextChannel((ChannelIndex)+1, 1);
 
         if (nextChannel == 0xFFFF)
         {	// no valid Channel found
@@ -2528,8 +2528,8 @@ static void LoadSettings()
   validScanListCount = 0;
   ShowLines = eepromData.ShowLines;
   ChannelAttributes_t att;
-  for (int i = 0; i < 200; i++) {
-    att = gMR_ChannelAttributes[i];
+  for (int i = 0; i < MR_CHANNEL_LAST; i++) {
+    EEPROM_ReadBuffer(0x0000 + i, (uint8_t *)&att, sizeof(att));
     if (att.scanlist > validScanListCount) {validScanListCount = att.scanlist;}
   }
   BK4819_WriteRegister(BK4819_REG_40, eepromData.R40);
@@ -2608,17 +2608,15 @@ static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
     uint16_t first_Channel = 0XFFFF;
     uint16_t Channel_count = 0;
 
-    // Szukaj kanału należącego do tej scanlisty i licz kanały
-    for (uint16_t i = 0; i < MR_CHANNEL_LAST; i++) {
-      att = gMR_ChannelAttributes[i];
+    for (int i = 0; i < MR_CHANNEL_LAST; i++) {
+      EEPROM_ReadBuffer(0x0000 + i, (uint8_t *)&att, sizeof(att));
         if (att.scanlist == scanListIndex + 1) {
             if (first_Channel == 0XFFFF)
                 first_Channel = i;
             Channel_count++;
         }
     }
-    if (first_Channel == 0XFFFF)
-        return false; // Brak kanałów
+    if (first_Channel == 0XFFFF) return false;
 
     SETTINGS_FetchChannelName(Channel_name, first_Channel);
     if (Channel_name[0] == '\0') {
@@ -2887,10 +2885,10 @@ static void BuildScanListChannels(uint8_t scanListIndex) {
     scanListChannelsCount = 0;
     ChannelAttributes_t att;
     
-    for (int i = 0; i < 200; i++) {
-        att = gMR_ChannelAttributes[i];
+    for (int i = 0; i < MR_CHANNEL_LAST; i++) {
+      EEPROM_ReadBuffer(0x0000 + i, (uint8_t *)&att, sizeof(att));
         if (att.scanlist == scanListIndex + 1) {
-            if (scanListChannelsCount < 200) {
+            if (scanListChannelsCount < MR_CHANNEL_LAST) {
                 scanListChannels[scanListChannelsCount++] = i;
             }
         }
