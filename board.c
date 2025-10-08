@@ -594,21 +594,6 @@ void BOARD_EEPROM_Init(void)
 		}
 	} */
 }
-#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
-// Load Channel frequencies, names into global memory lookup table
-void BOARD_gMR_LoadChannels() {
-	uint16_t  i;
-	uint32_t freq_buf;
-
-	for (i = MR_CHANNEL_FIRST; i < MR_CHANNEL_LAST; i++)
-	{
-		freq_buf = BOARD_fetchChannelFrequency(i);
-
-		gMR_ChannelFrequencyAttributes[i].Frequency = RX_freq_check(freq_buf) == 0XFF ? 0 : freq_buf;
-		SETTINGS_FetchChannelName(gMR_ChannelFrequencyAttributes[i].Name, i);
-	}
-}
-#endif
 
 void BOARD_EEPROM_LoadCalibration(void)
 {

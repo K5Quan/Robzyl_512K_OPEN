@@ -228,7 +228,7 @@ void SETTINGS_UpdateChannel(uint16_t Channel, const VFO_Info_t *pVFO, bool keep)
 			.scanlist = 0,
 			};        // default attributes
 
-		uint16_t offset = 0x2000 + (Channel & ~7u);
+		uint16_t offset = 0x0000 + (Channel & ~7u);
 		EEPROM_ReadBuffer(offset, state, sizeof(state));
 
 		if (keep) {

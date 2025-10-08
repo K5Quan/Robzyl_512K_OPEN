@@ -149,16 +149,6 @@ typedef union {
     uint8_t __val;
 } ChannelAttributes_t;
 
-#ifdef ENABLE_SPECTRUM_SHOW_CHANNEL_NAME
-typedef struct
-{
-	uint32_t     Frequency;
-	char         Name[12];
-}  __attribute__((packed)) ChannelFrequencyAttributes;
-
-extern ChannelFrequencyAttributes gMR_ChannelFrequencyAttributes[MR_CHANNEL_LAST];
-#endif
-
 #ifdef ENABLE_SCREENSHOT
          extern volatile uint8_t  gUART_LockScreenshot; // lock screenshot if Chirp is used
 #endif
