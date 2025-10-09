@@ -20,7 +20,7 @@
           char str[64] = "";sprintf(str, "%d\r\n", Spectrum_state );LogUart(str);
 */
 #define MAX_VISIBLE_LINES 6
-#define HISTORY_SIZE 10
+#define HISTORY_SIZE 30
 uint32_t HFreqs[HISTORY_SIZE]= {0};
 uint8_t HCount[HISTORY_SIZE]= {0};
 bool HBlacklisted[HISTORY_SIZE]= {0};
@@ -516,7 +516,7 @@ if (historyListActive == true){
             {i++;
             randomChannel++;
             if (randomChannel >scanChannelsCount)randomChannel = 1;
-            if (i > MR_CHANNEL_LAST) break;}
+            if (i>200) break;}
           rndfreq = gMR_ChannelFrequencyAttributes[scanChannel[randomChannel]].Frequency;
           SETTINGS_SetVfoFrequency(rndfreq);
           //SETTINGS_UpdateChannel(scanChannel[randomChannel],gTxVfo,1);
@@ -1695,7 +1695,7 @@ static void OnKeyDown(uint8_t key) {
               break;
           }
         case KEY_EXIT: // Exit parameters menu to previous menu/state
-          //SaveSettings();
+          SaveSettings();
           SetState(SPECTRUM);
           RelaunchScan();
           ResetModifiers();
@@ -2544,7 +2544,7 @@ static void LoadSettings()
   validScanListCount = 0;
   ShowLines = eepromData.ShowLines;
   ChannelAttributes_t att;
-  for (int i = 0; i < MR_CHANNEL_LAST; i++) {
+  for (int i = 0; i < 200; i++) {
     att = gMR_ChannelAttributes[i];
     if (att.scanlist > validScanListCount) {validScanListCount = att.scanlist;}
   }
@@ -2554,7 +2554,6 @@ static void LoadSettings()
   BK4819_WriteRegister(BK4819_REG_73, eepromData.R73);
   ReadHistory();
   }
-
 
 static void SaveSettings() 
 {
@@ -2625,7 +2624,8 @@ static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
     int first_Channel = -1;
     int Channel_count = 0;
 
-    for (int i = 0; i < MR_CHANNEL_LAST; i++) {
+    // Szukaj kanału należącego do tej scanlisty i licz kanały
+    for (int i = 0; i < 200; i++) {
       att = gMR_ChannelAttributes[i];
         if (att.scanlist == scanListIndex + 1) {
             if (first_Channel == -1)
@@ -2903,10 +2903,10 @@ static void BuildScanListChannels(uint8_t scanListIndex) {
     scanListChannelsCount = 0;
     ChannelAttributes_t att;
     
-    for (int i = 0; i < MR_CHANNEL_LAST; i++) {
+    for (int i = 0; i < 200; i++) {
         att = gMR_ChannelAttributes[i];
         if (att.scanlist == scanListIndex + 1) {
-            if (scanListChannelsCount < MR_CHANNEL_LAST) {
+            if (scanListChannelsCount < 200) {
                 scanListChannels[scanListChannelsCount++] = i;
             }
         }

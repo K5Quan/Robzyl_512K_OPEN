@@ -1051,7 +1051,7 @@ static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
 		if (gFlagSaveChannel)
 		{
-			SETTINGS_SaveChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, gFlagSaveChannel);
+			SETTINGS_SaveChannel(gTxVfo->CHANNEL_SAVE, 0, gTxVfo, gFlagSaveChannel);
 			gFlagSaveChannel = false;
 
 			if (gVfoConfigureMode == VFO_CONFIGURE_NONE)
@@ -1286,7 +1286,7 @@ Skip:
 	{
 		if (!bKeyHeld)
 		{
-			SETTINGS_SaveChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, gRequestSaveChannel);
+			SETTINGS_SaveChannel(gTxVfo->CHANNEL_SAVE, 0, gTxVfo, gRequestSaveChannel);
 
 				if (gVfoConfigureMode == VFO_CONFIGURE_NONE)  // 'if' is so as we don't wipe out previously setting this variable elsewhere
 					gVfoConfigureMode = VFO_CONFIGURE;

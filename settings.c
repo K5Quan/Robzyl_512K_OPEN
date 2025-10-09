@@ -136,7 +136,7 @@ void SETTINGS_SaveSettings(void)
 
 }
 
-void SETTINGS_SaveChannel(uint8_t Channel, const VFO_Info_t *pVFO, uint8_t Mode)
+void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode)
 {
 
 	{
@@ -144,7 +144,7 @@ void SETTINGS_SaveChannel(uint8_t Channel, const VFO_Info_t *pVFO, uint8_t Mode)
 
 		if (!IS_MR_CHANNEL(Channel))
 		{	// it's a VFO, not a Channel
-			OffsetVFO  = 0x0C80;
+			OffsetVFO  = (VFO == 0) ? 0x0C80 : 0x0C90;
 			OffsetVFO += (Channel - FREQ_CHANNEL_FIRST) * 32;
 		}
 

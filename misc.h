@@ -46,8 +46,8 @@
 enum {
 	MR_CHANNEL_FIRST   = 0,
 	MR_CHANNEL_LAST    = 199u,
-	FREQ_CHANNEL_FIRST = MR_CHANNEL_LAST+1,
-	FREQ_CHANNEL_LAST  = MR_CHANNEL_LAST+7,
+	FREQ_CHANNEL_FIRST = 200u,
+	FREQ_CHANNEL_LAST  = 206u,
 	LAST_CHANNEL
 };
 
@@ -156,14 +156,14 @@ typedef struct
 	char         Name[12];
 }  __attribute__((packed)) ChannelFrequencyAttributes;
 
-extern ChannelFrequencyAttributes gMR_ChannelFrequencyAttributes[MR_CHANNEL_LAST];
+extern ChannelFrequencyAttributes gMR_ChannelFrequencyAttributes[200];
 #endif
 
 #ifdef ENABLE_SCREENSHOT
          extern volatile uint8_t  gUART_LockScreenshot; // lock screenshot if Chirp is used
 #endif
 
-extern ChannelAttributes_t   gMR_ChannelAttributes[FREQ_CHANNEL_LAST + 1];
+extern ChannelAttributes_t   gMR_ChannelAttributes[207];
 
 typedef struct
 {
