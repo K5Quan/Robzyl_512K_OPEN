@@ -1245,7 +1245,7 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 	}
 
 	Channel = RADIO_FindNextChannel(gSubMenuSelection + Direction, Direction, bCheckScanList);
-	if (Channel != 0xFF)
+	if (Channel != 0xFFFF)
 		gSubMenuSelection = Channel;
 
 	gRequestDisplayScreen = DISPLAY_MENU;

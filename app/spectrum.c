@@ -2487,7 +2487,7 @@ void LoadValidMemoryChannels(void)
         uint16_t nextChannel;
         nextChannel = RADIO_FindNextChannel((ChannelIndex)+1, 1, listsEnabled);
 
-        if (nextChannel == 0xFF) {break;}
+        if (nextChannel == 0xFFFF) {break;}
         else
         {
           ChannelIndex = nextChannel;

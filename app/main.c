@@ -342,7 +342,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 			return;
 		}
 		Next = RADIO_FindNextChannel(Channel + Direction, Direction, false);
-		if (Next == 0xFF) return;
+		if (Next == 0xFFFF) return;
 		if (Channel == Next) return;
 		gEeprom.MrChannel     = Next;
 		gEeprom.ScreenChannel = Next;
