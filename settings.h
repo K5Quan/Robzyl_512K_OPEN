@@ -94,7 +94,7 @@ enum ROGER_Mode_t {
 };
 typedef enum ROGER_Mode_t ROGER_Mode_t;
 
-//typedef enum CHANNEL_DisplayMode_t CHANNEL_DisplayMode_t;
+typedef enum CHANNEL_DisplayMode_t CHANNEL_DisplayMode_t;
 
 typedef struct {
 	uint16_t               ScreenChannel; // current Channels set in the radio (memory or frequency Channels)

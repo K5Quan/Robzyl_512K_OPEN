@@ -155,5 +155,7 @@ void       RADIO_PrepareTX(void);
 void       RADIO_EnableCxCSS(void);
 void       RADIO_PrepareCssTX(void);
 void       RADIO_SendEndOfTransmission(bool playRoger);
-uint16_t RADIO_ValidMemoryChannelsCount(bool bCheckScanList);
 #endif
+
+uint16_t RADIO_ValidMemoryChannelsCount(bool bCheckScanList);
+

@@ -141,26 +141,24 @@ void RADIO_ConfigureChannel(const unsigned int configure)
 	else
 		Channel = FREQ_CHANNEL_LAST - 1;
 
-	ChannelAttributes_t att;
-	EEPROM_ReadBuffer(0x0000 + Channel, (uint8_t *)&att, sizeof(att));
-	if (IS_MR_CHANNEL(Channel)) {
-			Channel                    = gEeprom.FreqChannel;
+	//ChannelAttributes_t att;
+	//EEPROM_ReadBuffer(0x0000 + Channel, (uint8_t *)&att, sizeof(att));
+	ChannelAttributes_t att = gMR_ChannelAttributes[Channel];
+	if (att.__val == 0xFF) { // invalid/unused Channel
+		if (IS_MR_CHANNEL(Channel)) {
+			Channel               = gEeprom.FreqChannel;
 			gEeprom.ScreenChannel = Channel;
 		}
 
 		uint16_t bandIdx = Channel - FREQ_CHANNEL_FIRST;
 		RADIO_InitInfo(pVfo, Channel, frequencyBandTable[bandIdx].lower);
 		return;
-	
+	}
 
 	uint8_t band = att.band;
-	if (band > BAND7_470MHz) {
-		band = BAND6_400MHz;
-	}
+	if (band > BAND7_470MHz) { band = BAND6_400MHz;}
 
-	if (!IS_MR_CHANNEL(Channel)) {
-		band = Channel - FREQ_CHANNEL_FIRST;
-	}
+	if (!IS_MR_CHANNEL(Channel)) { band = Channel - FREQ_CHANNEL_FIRST;}
 	
 	pVfo->Band                    = band;
 	pVfo->SCANLIST 				  = att.scanlist;
@@ -170,7 +168,7 @@ void RADIO_ConfigureChannel(const unsigned int configure)
 	if (IS_MR_CHANNEL(Channel))
 		base = 0x2000 + Channel * 16;
 	else
-		base = 0x0C80;
+		base = 0x0C80 + ((Channel - FREQ_CHANNEL_FIRST) * 32);
 
 	if (configure == VFO_CONFIGURE_RELOAD || IS_FREQ_CHANNEL(Channel))
 	{
@@ -267,20 +265,23 @@ void RADIO_ConfigureChannel(const unsigned int configure)
 		}	
 
 		// ***************
-	}
-	struct {
-		uint32_t Frequency;
-		uint32_t Offset;
-	} __attribute__((packed)) info;
-	EEPROM_ReadBuffer(base, &info, sizeof(info));
-	if(info.Frequency==0xFFFFFFFF)
-		pVfo->freq_config_RX.Frequency = frequencyBandTable[band].lower;
-	else
-		pVfo->freq_config_RX.Frequency = info.Frequency;
-	if (info.Offset >= 100000000)
-		info.Offset = 1000000;
-	pVfo->TX_OFFSET_FREQUENCY = info.Offset;
 
+		struct {
+			uint32_t Frequency;
+			uint32_t Offset;
+		} __attribute__((packed)) info;
+		EEPROM_ReadBuffer(base, &info, sizeof(info));
+		if(info.Frequency==0xFFFFFFFF)
+			pVfo->freq_config_RX.Frequency = frequencyBandTable[band].lower;
+		else
+			pVfo->freq_config_RX.Frequency = info.Frequency;
+
+		if (info.Offset >= 100000000)
+			info.Offset = 1000000;
+		pVfo->TX_OFFSET_FREQUENCY = info.Offset;
+
+		// ***************
+	}
 
 	uint32_t frequency = pVfo->freq_config_RX.Frequency;
 
@@ -779,10 +780,10 @@ void RADIO_SendEndOfTransmission(bool playRoger)
 }
 
 uint16_t RADIO_ValidMemoryChannelsCount(bool bCheckScanList)
-	{
-		uint16_t count=0;
-		for (uint16_t i = MR_CHANNEL_FIRST; i<=MR_CHANNEL_LAST; ++i) {
+{
+	uint16_t count=0;
+	for (uint16_t i = MR_CHANNEL_FIRST; i<=MR_CHANNEL_LAST; ++i) {
 			if(RADIO_CheckValidChannel(i, bCheckScanList)) count++;
-			}
-		return count;
-	}
+		}
+	return count;
+}

@@ -166,7 +166,7 @@ static uint8_t nextBandToScanIndex = 0;
 uint8_t menuState = 0;
 
 #ifdef ENABLE_SCANLIST_SHOW_DETAIL
-  static uint16_t scanListChannels[MR_CHANNEL_LAST]; // Array to store Channel indices for selected scanlist
+  static uint16_t scanListChannels[MR_CHANNEL_LAST+1]; // Array to store Channel indices for selected scanlist
   static uint16_t scanListChannelsCount = 0; // Number of Channels in selected scanlist
   static uint16_t scanListChannelsSelectedIndex = 0;
   static uint16_t scanListChannelsScrollOffset = 0;
@@ -496,7 +496,7 @@ static void DeInitSpectrum(bool ComeBack) {
     }
 }
 
-/////////////////////////////EEPROM://///////////////////////////
+/*/////////////////////////////EEPROM://///////////////////////////
 void ReadChannelFrequency(uint16_t Channel, uint32_t *frequency) {
     EEPROM_ReadBuffer(0x2000 + Channel * 16, (uint8_t *)frequency, 4);
 }
@@ -543,7 +543,7 @@ void WriteHistory(uint8_t HPosition) {
     History.HBlacklisted = HBlacklisted[HPosition];
     EEPROM_WriteBuffer(0x9D00 + HPosition * sizeof(HistoryStruct), (uint8_t *)&History);
 }
-/////////////////////////////EEPROM://///////////////////////////
+/////////////////////////////EEPROM://///////////////////////////*/
 
 static void ExitAndCopyToVfo() {
   RestoreRegisters();
@@ -1279,8 +1279,9 @@ static void DrawF(uint32_t f) {
     BuildEnabledScanLists(enabledLists, sizeof(enabledLists));
     
     // --- Contexte canal ---
-    uint16_t ChannelFd = FetchChannelNumber(f);
-    isKnownChannel = (ChannelFd != 0XFFFF);
+    f = HFreqs[historyListIndex];
+    int ChannelFd = BOARD_gMR_fetchChannel(f);
+    isKnownChannel = (ChannelFd != -1);
     memmove(rxChannelName, ChannelName, sizeof(rxChannelName));
 
     // Buffers
@@ -2601,9 +2602,7 @@ static void SaveSettings()
   // Write in 8-byte chunks
   for (uint16_t addr = 0; addr < sizeof(eepromData); addr += 8) 
     EEPROM_WriteBuffer(addr + 0x1D10, ((uint8_t*)&eepromData) + addr);
-  for (uint16_t position = 0; position < indexFs; position++) {
-      WriteHistory(position);
-  }
+  //for (uint16_t position = 0; position < indexFs; position++) {WriteHistory(position);}
 }
 
 static void ClearSettings() 
@@ -2918,10 +2917,10 @@ static void BuildScanListChannels(uint8_t scanListIndex) {
     scanListChannelsCount = 0;
     ChannelAttributes_t att;
     
-    for (uint16_t i = 0; i < FREQ_CHANNEL_FIRST; i++) {
+    for (uint16_t i = 0; i < MR_CHANNEL_LAST+1; i++) {
         att = gMR_ChannelAttributes[i];
         if (att.scanlist == scanListIndex + 1) {
-            if (scanListChannelsCount < FREQ_CHANNEL_FIRST) {
+            if (scanListChannelsCount < MR_CHANNEL_LAST+1) {
                 scanListChannels[scanListChannelsCount++] = i;
             }
         }
