@@ -8,7 +8,7 @@
 #include "action.h"
 #include "bands.h"
 #include "ui/main.h"
-//#include "debugging.h"
+#include "debugging.h"
 
 
 #ifdef ENABLE_SCREENSHOT
@@ -114,7 +114,6 @@ char channelName[12];
 //NO NAMES char rxChannelName[12];
 ModulationMode_t  channelModulation;
 BK4819_FilterBandwidth_t channelBandwidth;
-void LoadValidMemoryChannels(void);
 bool isInitialized = false;
 bool isListening = true;
 bool newScanStart = true;
@@ -2499,6 +2498,8 @@ void LoadValidMemoryChannels(void)
           channelIndex = nextChannel;
           scanChannel[offset+i]=channelIndex;
           ScanListNumber[offset+i]=CurrentScanList;
+                    char str[64] = "";sprintf(str, "%d %d %d\r\n", offset,i,CurrentScanList );LogUart(str);
+
         }
       }
     }
