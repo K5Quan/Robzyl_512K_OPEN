@@ -93,7 +93,7 @@ typedef struct VFO_Info_t
 	uint32_t       TX_OFFSET_FREQUENCY;
 	uint16_t       StepFrequency;
 
-	uint8_t        CHANNEL_SAVE;
+	uint16_t        CHANNEL_SAVE;
 
 	uint8_t        TX_OFFSET_FREQUENCY_DIRECTION;
 

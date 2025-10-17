@@ -187,8 +187,8 @@ void SETTINGS_SaveChannelName(uint16_t Channel, const char * name)
 	uint8_t  buf[16];
 	memset(&buf, 0x00, sizeof(buf));
 	memcpy(buf, name, MIN(strlen(name),10u));
-	EEPROM_WriteBuffer(0x5E80 + offset, buf); //1000 Channels
-	EEPROM_WriteBuffer(0x5E88 + offset, buf + 8);
+	EEPROM_WriteBuffer(0x3A90 + offset, buf); //1000 Channels
+	EEPROM_WriteBuffer(0x3A98 + offset, buf + 8);
 }
 
 
@@ -207,8 +207,8 @@ void SETTINGS_FetchChannelName(char *s, const uint16_t Channel)
 	if (!RADIO_CheckValidChannel(Channel, false,0)) return;
 
 
-	EEPROM_ReadBuffer(0x5E80 + (Channel * 16), s + 0, 8);
-	EEPROM_ReadBuffer(0x5E88 + (Channel * 16), s + 8, 2);
+	EEPROM_ReadBuffer(0x3A90 + (Channel * 16), s + 0, 8);
+	EEPROM_ReadBuffer(0x3A98 + (Channel * 16), s + 8, 2);
 
 	for (i = 0; i < 10; i++)
 		if (s[i] < 32 || s[i] > 127)
@@ -229,7 +229,7 @@ void SETTINGS_UpdateChannel(uint16_t Channel, const VFO_Info_t *pVFO, bool keep)
 			.scanlist = 0,
 			};        // default attributes
 
-		uint16_t offset = 0xA1B0 + (Channel & ~7u);
+		uint16_t offset = 0x3900 + (Channel & ~7u);
 		EEPROM_ReadBuffer(offset, state, sizeof(state));
 
 		if (keep) {

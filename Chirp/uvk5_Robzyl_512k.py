@@ -5,10 +5,12 @@
 
 # 0x03E9 to 0x1DFF VFO params
 # 0x1F00 to 0x2000 calibration
-# 0x2000 to 0x5E80 channels freqs and params 16 bytes
-# 0x5E80 to 0x9CFF channels names 16 bytes
-# 0x9D00 to 0xA1BO history record 6bytes (chirp read only see PROG_SIZE)
-# 0xA1B0 to 0xA598 chanel attributes 1 byte
+
+# 0x2000 to 0x38FF channels freqs and params 16 bytes
+# 0x3900 to 0x3A8F chanel attributes 1 byte
+
+# 0x3A90 to 0x538F channels names 16 bytes
+# 0x5390 to 0x55E8 history record 6bytes (chirp read only see PROG_SIZE)
 
 
 import struct
@@ -36,12 +38,12 @@ DRIVER_VERSION = "Quansheng UV-K5/K6/5R driver (c)"
 VALEUR_COMPILER = "ENABLE"
 
 MEM_FORMAT = """
-#seekto 0xA1B0;
+#seekto 0x3900;
 struct {
 u8 scanlist:4,
 is_free:1,
 band:3;
-} ch_attr[1000];
+} ch_attr[400];
 
 #seekto 0x2000;
 struct {
@@ -62,12 +64,12 @@ struct {
   u8 __UNUSED2;
   u8 step;
   u8 scrambler;
-} Channel[1000];
+} Channel[400];
 
-#seekto 0x5E80;
+#seekto 0x3A90;
 struct {
 char name[16];
-} Channelname[1000];
+} Channelname[400];
 
 #seekto 0xe70;
 u8 unused1;
@@ -321,8 +323,8 @@ REMENDOFTALK_LIST = ["OFF", "Morse", "Mario"]
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
 
-MEM_SIZE = 0xB000   # size of all memory
-PROG_SIZE = 0xB000  # size of the memory that we will write
+MEM_SIZE = 0x538F   # size of all memory
+PROG_SIZE = 0x538F  # size of the memory that we will write
 MEM_BLOCK = 0x80    # largest block of memory that we can reliably write
 BANDS_WIDE = {
         0: [ 18.0, 620.0],
@@ -675,7 +677,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         rf.valid_skips = [""]
 
-        rf.memory_bounds = (1, 1000)
+        rf.memory_bounds = (1, 400)
         # This is what the BK4819 chip supports
         # Will leave it in a comment, might be useful someday
         rf.valid_bands = [(18000000,  620000000),
@@ -831,7 +833,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # We'll also look at the Channel attributes if a memory has them
         tmpscn = SCANLIST_LIST[0]
 
-        if ch_num < 1000:
+        if ch_num < 400:
             _mem3 = self._memobj.ch_attr[ch_num]
             # free memory bit
             if _mem3.is_free:

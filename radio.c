@@ -60,16 +60,11 @@ const char *bwNames[5] = {"25k", "12.5k", "8.33k", "6.25k", "5k"};
 
 bool RADIO_CheckValidChannel(uint16_t Channel, bool bCheckScanList, uint8_t VFO)
 {	// return true if the channel appears valid
-
 	ChannelAttributes_t att;
-
-	if (!IS_MR_CHANNEL(Channel))
-		return false;
-
+	if (!IS_MR_CHANNEL(Channel)) return false;
 	att = gMR_ChannelAttributes[Channel];
 
-	if (att.band > BAND7_470MHz)
-		return false;
+	if (att.band > BAND7_470MHz) return false;
 
 	if (bCheckScanList) {
 		if (att.scanlist == VFO + 1)
@@ -87,18 +82,11 @@ uint16_t RADIO_FindNextChannel(uint16_t Channel, int8_t Direction, bool bCheckSc
 		
 	for (i = 0; IS_MR_CHANNEL(i); i++)
 	{
-		if (Channel == 0xFFFF)
-			Channel = MR_CHANNEL_LAST;
-		else
-		if (!IS_MR_CHANNEL(Channel))
-			Channel = MR_CHANNEL_FIRST;
-
-		if (RADIO_CheckValidChannel(Channel, bCheckScanList, VFO))
-			return Channel;
-
+		if (Channel == 0xFFFF) Channel = MR_CHANNEL_LAST;
+		else if (!IS_MR_CHANNEL(Channel)) Channel = MR_CHANNEL_FIRST;
+		if (RADIO_CheckValidChannel(Channel, bCheckScanList, VFO)) return Channel;
 		Channel += Direction;
 	}
-	
 	return 0xFFFF;
 }
 

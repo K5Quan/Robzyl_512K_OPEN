@@ -20,7 +20,7 @@
           char str[64] = "";sprintf(str, "%d\r\n", Spectrum_state );LogUart(str);
 */
 #define MAX_VISIBLE_LINES 6
-#define HISTORY_SIZE 50
+#define HISTORY_SIZE 30
 uint32_t HFreqs[HISTORY_SIZE]= {0};
 uint8_t HCount[HISTORY_SIZE]= {0};
 bool HBlacklisted[HISTORY_SIZE]= {0};
@@ -501,7 +501,7 @@ static void DeInitSpectrum(bool ComeBack) {
 }*/
 
 void ReadChannelName(uint16_t Channel, char *name) {
-    EEPROM_ReadBuffer(0x5E80 + Channel * 16, (uint8_t *)name, 16);
+    EEPROM_ReadBuffer(0x3A90 + Channel * 16, (uint8_t *)name, 16);
 }
 
 /*uint16_t FetchChannelNumber(uint32_t frequency) {
@@ -525,7 +525,7 @@ typedef struct HistoryStruct {
 void ReadHistory() {
     HistoryStruct History= {0};
     for (uint16_t position = 0; position < HISTORY_SIZE; position++) {
-    EEPROM_ReadBuffer(0x9D00 + position * sizeof(HistoryStruct), (uint8_t *)&History, sizeof(HistoryStruct));
+    EEPROM_ReadBuffer(0x5390 + position * sizeof(HistoryStruct), (uint8_t *)&History, sizeof(HistoryStruct));
     if (History.HBlacklisted > 1) return;
     HFreqs[position] = History.HFreqs;
     HCount[position] = History.HCount;
@@ -540,7 +540,7 @@ void WriteHistory() {
       History.HFreqs = HFreqs[position];
       History.HCount = HCount[position];
       History.HBlacklisted = HBlacklisted[position];
-      EEPROM_WriteBuffer(0x9D00 + position * sizeof(HistoryStruct), (uint8_t *)&History);
+      EEPROM_WriteBuffer(0x5390 + position * sizeof(HistoryStruct), (uint8_t *)&History);
     }
 }
 /////////////////////////////EEPROM://///////////////////////////*/
@@ -2486,12 +2486,13 @@ void LoadValidMemoryChannels(void)
       uint16_t offset = scanChannelsCount;
       uint16_t listChannelsCount = RADIO_ValidMemoryChannelsCount(listsEnabled, CurrentScanList-1);
       scanChannelsCount += listChannelsCount;
-      uint16_t channelIndex= 0xFFFF;
+      uint16_t channelIndex= 0;
+      char str[64] = "";sprintf(str, "listChannelsCount: %d\r\n", listChannelsCount );LogUart(str);
       for(uint16_t i=0; i < listChannelsCount; i++)
       {
         uint16_t nextChannel;
-        nextChannel = RADIO_FindNextChannel((channelIndex)+1, 1, listsEnabled, CurrentScanList-1);
-
+        nextChannel = RADIO_FindNextChannel((channelIndex), 1, listsEnabled, CurrentScanList-1);
+        
         if (nextChannel == 0xFFFF) {break;}
         else
         {

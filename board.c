@@ -585,8 +585,7 @@ void BOARD_EEPROM_Init(void)
 		gEeprom.ScreenChannel = gEeprom.MrChannel;
 	}
 
-	// 0D60..0E27
-	EEPROM_ReadBuffer(0xA1B0, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
+	EEPROM_ReadBuffer(0x3900, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
 	for(uint16_t i = 0; i < sizeof(gMR_ChannelAttributes); i++) {
 		ChannelAttributes_t *att = &gMR_ChannelAttributes[i];
 		if(att->__val == 0xff){
@@ -694,6 +693,6 @@ void BOARD_FactoryReset()
 	memset(Template, 0xFF, sizeof(Template));
 	//Don't erase Calibration
 	for (i = 0x0000; i < 0x1E00; i += 8) EEPROM_WriteBuffer(i, Template);
-	for (i = 0x2000; i < 0x9FFF; i += 8) EEPROM_WriteBuffer(i, Template);
+	for (i = 0x2000; i < 0x6000; i += 8) EEPROM_WriteBuffer(i, Template);
 
 }
