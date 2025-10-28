@@ -123,7 +123,7 @@ void SETTINGS_SaveChannel(uint16_t Channel, const VFO_Info_t *pVFO, uint8_t Mode
 		if (!IS_MR_CHANNEL(Channel))
 		{	// it's a VFO, not a Channel
 			OffsetVFO  = 0x0C80;
-			//OffsetVFO += (Channel - FREQ_CHANNEL_FIRST) * 32;
+			OffsetVFO += (Channel - FREQ_CHANNEL_FIRST) * 32;
 		}
 
 		if (Mode >= 2 || !IS_MR_CHANNEL(Channel))

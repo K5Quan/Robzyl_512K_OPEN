@@ -20,7 +20,6 @@ ENABLE_PWRON_PASSWORD         := 0
 # ---- CUSTOM MODS ----
 ENABLE_BIG_FREQ                         := 1
 ENABLE_SMALL_BOLD                       := 1
-ENABLE_WIDE_RX                          := 1
 ENABLE_TX_WHEN_AM                       := 0
 ENABLE_F_CAL_MENU                       := 0
 ENABLE_SHOW_CHARGE_LEVEL                := 0
@@ -264,9 +263,6 @@ ifeq ($(ENABLE_PWRON_PASSWORD),1)
 	CFLAGS  += -DENABLE_PWRON_PASSWORD
 endif
 
-ifeq ($(ENABLE_WIDE_RX),1)
-	CFLAGS  += -DENABLE_WIDE_RX
-endif
 ifeq ($(ENABLE_TX_WHEN_AM),1)
 	CFLAGS  += -DENABLE_TX_WHEN_AM
 endif

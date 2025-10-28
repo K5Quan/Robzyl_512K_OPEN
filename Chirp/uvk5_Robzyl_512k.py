@@ -326,8 +326,13 @@ MEM_SIZE = 0x538F   # size of all memory
 PROG_SIZE = 0x538F  # size of the memory that we will write
 MEM_BLOCK = 0x80    # largest block of memory that we can reliably write
 BANDS_WIDE = {
-        0: [ 18.0, 620.0],
-        1: [840.0, 1300.0]
+        0: [ 18.0, 108.0],
+        1: [108.0, 136.9999],
+        2: [137.0, 173.9999],
+        3: [174.0, 349.9999],
+        4: [350.0, 399.9999],
+        5: [400.0, 469.9999],
+        6: [470.0, 1300.0]
         }
 
 SCANLIST_LIST = ["None", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]

@@ -37,6 +37,7 @@
 #include "ui/inputbox.h"
 #include "ui/ui.h"
 #include <stdlib.h>
+#include "debugging.h"
 
 static void MAIN_Key_STAR(bool closecall)
 {
@@ -92,21 +93,14 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 				return;
 			}
 
-#ifdef ENABLE_WIDE_RX
 			if(gTxVfo->pRX->Frequency < 100000000) { //Robby69 directly go to 1Ghz
 			//if(gTxVfo->Band == 6 && gTxVfo->pRX->Frequency < 100000000) {
 					gTxVfo->Band = 7;
 					gTxVfo->pRX->Frequency = 100000000;
 					return;
 			}
-//			else 
-#endif			
-
-
-
 			gRequestSaveVFO            = true;
 			gVfoConfigureMode          = VFO_CONFIGURE_RELOAD;
-
 			gRequestDisplayScreen      = DISPLAY_MAIN;
 
 
@@ -312,44 +306,39 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
             
 	if (bKeyHeld || !bKeyPressed)
 	{
-		if (gInputBoxIndex > 0)
-			return;
+		if (gInputBoxIndex > 0) return;
 
 		if (!bKeyPressed)
 		{
-			if (!bKeyHeld)
-				return;
-
-			if (IS_FREQ_CHANNEL(Channel))
-				return;
+			if (!bKeyHeld) return;
+			if (IS_FREQ_CHANNEL(Channel))return;
 			return;
 		}
 	}
 
 	else {if (gInputBoxIndex > 0)	return;}
 
-		uint16_t Next;
-		if (IS_FREQ_CHANNEL(Channel))
-		{	// step/down in frequency
-			const uint32_t frequency = APP_SetFrequencyByStep(gTxVfo, Direction);
-			if (RX_freq_check(frequency) == 0xFF) return;
-					
-			gTxVfo->freq_config_RX.Frequency = frequency;
-			BK4819_SetFrequency(frequency);
-			
-			//BK4819_RX_TurnOn();
-			gRequestSaveChannel = 1;
-			return;
-		}
+	uint16_t Next;
+	char str[64] = "";sprintf(str, "ch %d \r\n", Channel);LogUart(str);
+	if (IS_FREQ_CHANNEL(Channel))
+	{	// step/down in frequency
+		const uint32_t frequency = APP_SetFrequencyByStep(gTxVfo, Direction);
+		char str[64] = "";sprintf(str, "freq %d \r\n", frequency);LogUart(str);
+		//if (RX_freq_check(frequency) == 0xFF) return;
+		gTxVfo->freq_config_RX.Frequency = frequency;
+		BK4819_SetFrequency(frequency);
+		gRequestSaveChannel = 1;
+		return;
+	}
+	else {
 		Next = RADIO_FindNextChannel(Channel + Direction, Direction, false,0);
 		if (Next == 0xFFFF) return;
 		if (Channel == Next) return;
 		gEeprom.MrChannel     = Next;
 		gEeprom.ScreenChannel = Next;
-		gRequestSaveVFO   = true;
-		gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
-		return;
-
+	}
+	gRequestSaveVFO   = true;
+	gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
 	gPttWasReleased = true;
 }
 

@@ -436,26 +436,10 @@ void APP_StartListening(FUNCTION_Type_t Function)
 	gUpdateStatus = true;
 }
 
-uint32_t APP_SetFreqByStepAndLimits(VFO_Info_t *pInfo, int8_t direction, uint32_t lower, uint32_t upper)
-{
-	uint32_t Frequency = FREQUENCY_RoundToStep(pInfo->freq_config_RX.Frequency + (direction * pInfo->StepFrequency), pInfo->StepFrequency);
-
-	// Fixes frequency step down when frequency == 0
-	if (Frequency == 0 && direction < 0) {
-		return upper;
-	}
-
-	if (Frequency > upper)
-		Frequency =  lower;
-	else if (Frequency < lower)
-		Frequency =  upper;
-
-	return Frequency;
-}
-
 uint32_t APP_SetFrequencyByStep(VFO_Info_t *pInfo, int8_t direction)
 {
-	return APP_SetFreqByStepAndLimits(pInfo, direction, Band_freq_min(pInfo->Band), frequencyBandTable[pInfo->Band].upper);
+	uint32_t Frequency = FREQUENCY_RoundToStep(pInfo->freq_config_RX.Frequency + (direction * pInfo->StepFrequency), pInfo->StepFrequency);
+	return Frequency;
 }
 
 static void CheckRadioInterrupts(void)
