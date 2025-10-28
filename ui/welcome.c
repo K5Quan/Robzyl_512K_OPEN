@@ -77,13 +77,19 @@ void UI_DisplayWelcome(void)
 		}
 		else
 		{
-			EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
-			EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
+			//EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
+			//EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
+			strcpy(WelcomeString0, "ROBZYL");
+#ifdef ENABLE_EEPROM_512K
+			strcpy(WelcomeString1, "512K EEPROM");
+#else 
+			strcpy(WelcomeString1, "8K EEPROM");
+#endif
 		}
 
 		UI_PrintString(WelcomeString0, 0, 127, 0, 10);
 		UI_PrintString(WelcomeString1, 0, 127, 2, 10);
-		UI_PrintStringSmall(Version, 0, 128, 6,0);
+		UI_PrintString(Version, 0, 127, 4,10);
 
 		ST7565_BlitStatusLine();  // blank status line
 		ST7565_BlitFullScreen();

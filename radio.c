@@ -325,7 +325,7 @@ void RADIO_ConfigureChannel(const unsigned int configure)
 	}
 
 	BK4819_InitAGC(gTxVfo->Modulation);
-	BK4819_SetAGC(1);
+	//Test Kolyan BK4819_SetAGC(1);
 	RADIO_ConfigureSquelchAndOutputPower(pVfo);
 }
 

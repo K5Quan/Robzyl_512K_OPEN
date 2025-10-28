@@ -1127,11 +1127,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 _mem.keyM_longpress_action = KEYACTIONS_LIST.index(
                         str(element.value))
 
-
-            elif element.changed() and elname.startswith("_mem.cal."):
-                exec(elname + " = element.value.get_value()")
-
-
     def get_settings(self):
         _mem = self._memobj
         basic = RadioSettingGroup("basic", "Basic Settings")

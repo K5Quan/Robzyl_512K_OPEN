@@ -88,7 +88,7 @@ void Main(void)
 	RADIO_SetupRegisters(true);
 
 	BK4819_InitAGC(gTxVfo->Modulation);
-	BK4819_SetAGC(1);
+	//Test Kolyan BK4819_SetAGC(1);
 
 	for (i = 0; i < ARRAY_SIZE(gBatteryVoltages); i++)
 		BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[i]);
@@ -159,7 +159,7 @@ void Main(void)
 
 		if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE)
 		{	// 0.5 seconds boot-up screen
-			SYSTEM_DelayMs(500);
+			SYSTEM_DelayMs(1000);
 		}
 		else
 		{

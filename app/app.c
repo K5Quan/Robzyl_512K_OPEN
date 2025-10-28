@@ -129,22 +129,38 @@ void UpdateAndDrawGlitchScope(void)
 	
 } */
 
+int32_t afc_to_deviation_hz(uint16_t reg_6d) {
+  return ((int64_t)(int16_t)reg_6d * 1000LL) / 291LL;
+}
+
 void DrawNumeric(void)
 {
     int pos=0;
 	uint16_t rssi  = gCurrentRSSI;
-    uint8_t glitch = BK4819_GetGlitchIndicator();
-    uint16_t noise = BK4819_GetExNoiseIndicator();
+    //uint8_t glitch = BK4819_GetGlitchIndicator();
+    //uint16_t noise = BK4819_GetExNoiseIndicator();
+  	
+	uint8_t afcspeed = 18;//9-63
+  	uint8_t afcrange = 0;//0-7
+  	bool  disableafc = 0;
+
+	
 	
 	uint32_t cdcssFreq;
 	uint16_t ctcssFreq;
     uint8_t code = 0;
 	char buf[32]= "";
 	char buf2[32]= "";
-    memset(&gFrameBuffer[0][0], 0, 2 * 128);
-	sprintf(buf, "GL:%3u RS:%3u NO:%3u",glitch, rssi, noise );
-	UI_PrintStringSmall(buf, 1, 0, 0, 0);
-	
+
+	if(gCurrentFunction == FUNCTION_RECEIVE || gCurrentFunction == FUNCTION_MONITOR || gCurrentFunction == FUNCTION_INCOMING) {
+		BK4819_WriteRegister(0x73, 0x4005 | (afcrange << 11) | (afcspeed << 5) | (disableafc << 4) );
+		SYSTEM_DelayMs(10);
+		int32_t hz = afc_to_deviation_hz(BK4819_ReadRegister(0x6D));
+    	memset(&gFrameBuffer[0][0], 0, 2 * 128);
+		//sprintf(buf, "GL:%3u RS:%3u NO:%3u",glitch, rssi, noise );
+		sprintf(buf, "RS:%3u AFC:%+d ", rssi, hz);
+		UI_PrintStringSmall(buf, 1, 0, 0, 0);
+	}
 	if(gCurrentFunction == FUNCTION_TRANSMIT) {
 		uint8_t voice_amp  = BK4819_GetVoiceAmplitudeOut();
 		sprintf(&buf2[pos],"AU:%3d ",voice_amp);

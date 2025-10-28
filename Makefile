@@ -1,5 +1,7 @@
-AUTHOR_STRING := ROBZYL
-VERSION_STRING := X5.4
+AUTHOR_STRING := ""
+VERSION_STRING := V5.4.0
+
+
 
 # compile options (see README.md for descriptions)
 # 0 = disable
