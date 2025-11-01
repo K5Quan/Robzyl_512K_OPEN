@@ -780,7 +780,7 @@ static bool InitScan() {
       uint16_t currentChannel = scanChannel[0];
       scanInfo.f = gMR_ChannelFrequencyAttributes[currentChannel].Frequency; 
     }
-    BK4819_SetFilterBandwidth(settings.listenBw, false);
+    //BK4819_SetFilterBandwidth(settings.listenBw, false);
     return scanInitializedSuccessfully;
 }
 
@@ -803,14 +803,12 @@ static void RelaunchScan() {
 
 void UpdateNoiseOff(){
 	const uint16_t NOISLVL = 69; //65-72
-  if( BK4819_GetExNoiseIndicator() > NOISLVL) {gIsPeak = false;}		
+  if( BK4819_GetExNoiseIndicator() > NOISLVL) {gIsPeak = false;ToggleRX(false);}		
 }
 
 void UpdateNoiseOn(){
 	const uint16_t NOISLVL = 60; //65-72
-	if( BK4819_GetExNoiseIndicator() < NOISLVL) {
-    gIsPeak = true;
-    ToggleRX(true);}
+	if( BK4819_GetExNoiseIndicator() < NOISLVL) {gIsPeak = true;ToggleRX(true);}
 
 }
 
@@ -948,6 +946,7 @@ static void ToggleModulation() {
 
 static void ToggleListeningBW(bool inc) {
   settings.listenBw = ACTION_NextBandwidth(settings.listenBw, false, inc);
+  BK4819_SetFilterBandwidth(settings.listenBw, false);
   
 }
 
@@ -2292,10 +2291,10 @@ bool HandleUserInput() {
 }
 
 static void UpdateScan() {
-  if(gIsPeak || SpectrumMonitor) return;
+  if(gIsPeak || SpectrumMonitor || WaitSpectrum) return;
   SetF(scanInfo.f);
   Measure();
-  if(gIsPeak || SpectrumMonitor) return;
+  if(gIsPeak || SpectrumMonitor || WaitSpectrum) return;
   //UpdateScanInfo();
   if (scanInfo.i < GetStepsCount()) {
     NextScanStep();
@@ -2338,13 +2337,14 @@ static void UpdateListening(void) { // called every 10ms
         stableFreq = peak.f;
         stableCount = 0;
     }
-    if (isListening ||SpectrumMonitor) UpdateNoiseOff();
+    if (isListening ||SpectrumMonitor||WaitSpectrum) UpdateNoiseOff();
     UpdateNoiseOn();
     
     if (gIsPeak) {
         WaitSpectrum = SpectrumDelay;   // reset timer
         return;
     }
+
     if (WaitSpectrum > 61000) {
         return;
     }
@@ -2352,12 +2352,9 @@ static void UpdateListening(void) { // called every 10ms
         WaitSpectrum -= 10;
         return;
     }
-    
     // timer écoulé
     WaitSpectrum = 0;
-    ToggleRX(false);
     ResetScanStats();
-    //NextScanStep();
 }
 
 
@@ -2385,7 +2382,7 @@ static void Tick() {
   if (gNextTimeslice_10ms) {
     HandleUserInput();
     gNextTimeslice_10ms = 0;
-    if (isListening || SpectrumMonitor) UpdateListening(); 
+    if (isListening || SpectrumMonitor || WaitSpectrum) UpdateListening(); 
   }
 
   if(!isListening && gIsPeak) {
@@ -2438,7 +2435,7 @@ void APP_RunSpectrum(uint8_t Spectrum_state) {
   isListening = true; // to turn off RX later
   newScanStart = true;
   RADIO_SetModulation(settings.modulationType = MODULATION_FM);
-  BK4819_SetFilterBandwidth(settings.listenBw, false);
+  //BK4819_SetFilterBandwidth(settings.listenBw, false);
   AutoAdjustFreqChangeStep();
   RelaunchScan();
   for (int i = 0; i < 128; ++i) {rssiHistory[i] = 0;}
@@ -2523,6 +2520,7 @@ typedef struct {
     uint16_t R29;                      // AF TX noise compressor, AF TX 0dB compressor, AF TX compression ratio
     uint16_t R19;                      // Disable MIC AGC
     uint16_t R73;                      // AFC range select
+    uint16_t SpectrumDelay;
 } SettingsEEPROM;
 
 
@@ -2538,6 +2536,7 @@ static void LoadSettings()
   }
   settings.rssiTriggerLevelUp = eepromData.Trigger;
   settings.listenBw = eepromData.listenBw;
+  BK4819_SetFilterBandwidth(settings.listenBw, false);
   if (eepromData.RangeStart > 1400000) gScanRangeStart = eepromData.RangeStart;
   if (eepromData.RangeStop > 1400000) gScanRangeStop = eepromData.RangeStop;
   settings.scanStepIndex = eepromData.scanStepIndex;
@@ -2551,6 +2550,7 @@ static void LoadSettings()
   PttEmission = eepromData.PttEmission;
   validScanListCount = 0;
   ShowLines = eepromData.ShowLines;
+  SpectrumDelay = eepromData.SpectrumDelay;
   ChannelAttributes_t att;
   for (int i = 0; i < MR_CHANNEL_LAST+1; i++) {
     att = gMR_ChannelAttributes[i];
@@ -2580,6 +2580,7 @@ static void SaveSettings()
   eepromData.PttEmission = PttEmission;
   eepromData.scanStepIndex = settings.scanStepIndex;
   eepromData.ShowLines = ShowLines;
+  eepromData.SpectrumDelay = SpectrumDelay;
   for (int i = 0; i < 32; i++) { 
       eepromData.BPRssiTriggerLevelUp[i] = BPRssiTriggerLevelUp[i];
       if (settings.bandEnabled[i]) eepromData.bandListFlags |= (1 << i);
@@ -2617,6 +2618,7 @@ static void ClearSettings()
   PttEmission = 2;
   settings.scanStepIndex = S_STEP_500kHz;
   ShowLines = 2;
+  SpectrumDelay = 0;
   for (int i = 0; i < 32; i++) { 
       BPRssiTriggerLevelUp[i] = 5;
       settings.bandEnabled[i] = 0;
