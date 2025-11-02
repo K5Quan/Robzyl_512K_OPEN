@@ -8,7 +8,7 @@
 #include "action.h"
 #include "bands.h"
 #include "ui/main.h"
-#include "debugging.h"
+//#include "debugging.h"
 
 
 #ifdef ENABLE_SCREENSHOT
@@ -164,8 +164,6 @@ KEY_Code_t freqInputArr[10];
 char freqInputString[11];
 static const bandparameters BParams[32];
 static uint8_t nextBandToScanIndex = 0;
-
-uint8_t menuState = 0;
 
 #ifdef ENABLE_SCANLIST_SHOW_DETAIL
   static uint16_t scanListChannels[MR_CHANNEL_LAST+1]; // Array to store Channel indices for selected scanlist
@@ -1960,23 +1958,18 @@ static void OnKeyDown(uint8_t key) {
       currentFreq = Last_Tuned_Freq;
       if(scanInfo.f != Last_Tuned_Freq) SetF(Last_Tuned_Freq);
       scanInfo.f = Last_Tuned_Freq;
-      SetState(STILL);
-      menuState = 0;
+      SetState(STILL);      
   break;
 
-  case KEY_EXIT:
+  case KEY_EXIT: //exit from spectrum
+  
     if (historyListActive == true) {
       SetState(SPECTRUM);
       historyListActive = false;
       break;
       }
-    if (WaitSpectrum) { //STOP wait
-      WaitSpectrum = 0; 
-      break;
-    }
-
-    if (menuState) { menuState = 0;break;}
-      DeInitSpectrum(0);
+    if (WaitSpectrum) {WaitSpectrum = 0;} //STOP wait
+    DeInitSpectrum(0);
     break;
    
    default:
@@ -2239,17 +2232,16 @@ static void Render() {
 bool HandleUserInput() {
     kbd.prev = kbd.current;
     kbd.current = GetKey();
-    if (kbd.current != KEY_INVALID && kbd.current == kbd.prev) {
-        if (kbd.counter < 16)
-            kbd.counter++;
+    /* if (kbd.current != KEY_INVALID && kbd.current == kbd.prev) {
+        if (kbd.counter < 16) kbd.counter++;
         else
             kbd.counter -= 3;
         SYSTEM_DelayMs(20);
     } else {
         kbd.counter = 0;
-    }
+    } */
 
-    if (kbd.counter == 3 || kbd.counter == 16) {
+    //if (kbd.counter == 3 || kbd.counter == 16) {
     
         if (kbd.current == KEY_0) {
             if (!historyListActive) {
@@ -2286,7 +2278,7 @@ bool HandleUserInput() {
 #endif // ENABLE_SCANLIST_SHOW_DETAIL
         }
         return true;
-    }
+    //}
     return false;
 }
 
@@ -2331,7 +2323,8 @@ static void UpdateListening(void) { // called every 10ms
             if (!SpectrumMonitor) FillfreqHistory();
             stableCount = 0;
             // turn on green led only if screen brightness is over 7
-            BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 1);
+            if(gEeprom.BACKLIGHT_MAX > 5)
+                BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 1);
         }
     } else {
         stableFreq = peak.f;
@@ -2376,7 +2369,6 @@ static void Tick() {
         }
         return;  // Priorytet dla OSD (?)
     }
-
 
 
   if (gNextTimeslice_10ms) {
