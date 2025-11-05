@@ -75,5 +75,10 @@ SECTIONS
 		. = . + _Min_Stack_Size;
 		. = ALIGN(4);
 	} >RAM
+	/* --- helper symbols for runtime memory checks --- */
+/* Heap (sterta) zaczyna się zaraz po .bss */
+_sheap = _ebss;
+/* Rezerwa dla minimalnego stosu: koniec sterty (limit) = górna granica RAM minus zarezerwowany minimalny stos */
+_eheap = _estack - _Min_Stack_Size;
 }
 

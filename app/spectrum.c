@@ -8,7 +8,7 @@
 #include "action.h"
 #include "bands.h"
 #include "ui/main.h"
-//#include "debugging.h"
+#include "debugging.h"
 
 
 #ifdef ENABLE_SCREENSHOT
@@ -20,12 +20,7 @@
           char str[64] = "";sprintf(str, "%d\r\n", Spectrum_state );LogUart(str);
 */
 #define MAX_VISIBLE_LINES 6
-#ifdef ENABLE_EEPROM_512K
-    #define HISTORY_SIZE 100	
-#else 
-	  #define HISTORY_SIZE 200
-#endif
-
+#define HISTORY_SIZE 250	
 
 uint32_t HFreqs[HISTORY_SIZE]= {0};
 uint8_t HCount[HISTORY_SIZE]= {0};
@@ -44,8 +39,9 @@ uint32_t gScanRangeStop = 13000000;             // 5
 //Modulation                                    // 8
 //ClearSettings                                 // 9
 bool gCounthistory = 1;                         // 10
-//ClearHistory                                  //11
-#define PARAMETER_COUNT 11
+//ClearHistory                                  // 11
+uint8_t SpectrumMaxDelay = 255;                 // 12
+#define PARAMETER_COUNT 12
 ////////////////////////////////////////////////////////////////////
 
 
@@ -527,27 +523,44 @@ typedef struct HistoryStruct {
 } HistoryStruct;
 
 #ifdef ENABLE_EEPROM_512K
-void ReadHistory() {
-    HistoryStruct History= {0};
+void ReadHistory(void) {
+    HistoryStruct History = {0};
     for (uint16_t position = 0; position < HISTORY_SIZE; position++) {
-    EEPROM_ReadBuffer(ADRESS_HISTORY + position * sizeof(HistoryStruct), (uint8_t *)&History, sizeof(HistoryStruct));
-    if (History.HBlacklisted > 1) return;
-    HFreqs[position] = History.HFreqs;
-    HCount[position] = History.HCount;
-    HBlacklisted[position] = History.HBlacklisted;
-    indexFs = position;
-  }
-}
+        EEPROM_ReadBuffer(ADRESS_HISTORY + position * sizeof(HistoryStruct),
+                          (uint8_t *)&History, sizeof(HistoryStruct));
 
-void WriteHistory() {
-    HistoryStruct History= {0};
-    for (uint8_t position = 0; position < indexFs; position++) {
-      History.HFreqs = HFreqs[position];
-      History.HCount = HCount[position];
-      History.HBlacklisted = HBlacklisted[position];
-      EEPROM_WriteBuffer(ADRESS_HISTORY + position * sizeof(HistoryStruct), (uint8_t *)&History);
+        // Stop si marque de fin trouvée
+        if (History.HBlacklisted == 0xFF) {
+            indexFs = position;
+            break;
+        }
+
+        HFreqs[position] = History.HFreqs;
+        HCount[position] = History.HCount;
+        HBlacklisted[position] = History.HBlacklisted;
+        indexFs = position + 1;
     }
 }
+
+
+void WriteHistory(void) {
+    HistoryStruct History = {0};
+    for (uint8_t position = 0; position < indexFs; position++) {
+        History.HFreqs = HFreqs[position];
+        History.HCount = HCount[position];
+        History.HBlacklisted = HBlacklisted[position];
+        EEPROM_WriteBuffer(ADRESS_HISTORY + position * sizeof(HistoryStruct),
+                           (uint8_t *)&History);
+    }
+
+    // Marque de fin (HBlacklisted = 0xFF)
+    History.HFreqs = 0;
+    History.HCount = 0;
+    History.HBlacklisted = 0xFF;
+    EEPROM_WriteBuffer(ADRESS_HISTORY + indexFs * sizeof(HistoryStruct),
+                       (uint8_t *)&History);
+}
+
 #endif
 
 /////////////////////////////EEPROM://///////////////////////////*/
@@ -651,41 +664,47 @@ static void ToggleAudio(bool on) {
 }
 
 void FillfreqHistory(void) {
-    
+
     if (peak.f == 0) return;
 
-    for (uint8_t i = 0; i < HISTORY_SIZE; i++) {
+    // Recherche si la fréquence existe déjà
+    for (uint8_t i = 0; i < indexFs; i++) {
         if (HFreqs[i] == peak.f) {
             if (lastReceivingFreq != peak.f && gCounthistory) {
                 lastReceivingFreq = peak.f;
                 HCount[i]++;
-            }
-            else if (!gCounthistory) {
+            } else if (!gCounthistory) {
                 HCount[i]++;
             }
-
             historyListIndex = i;
             return;
         }
     }
 
-    HFreqs[indexFs]   = peak.f;
-    HCount[indexFs]       = 1;
-    HBlacklisted[indexFs] = false;
-    historyListIndex = indexFs;
-    if (++indexFs >= HISTORY_SIZE) {
-      //historyListIndex = 0;
-      historyScrollOffset = 0;
-      indexFs=0;
+    // Nouvelle fréquence → ajout à la suite
+    if (indexFs < HISTORY_SIZE - 1) {
+        HFreqs[indexFs]       = peak.f;
+        HCount[indexFs]       = 1;
+        HBlacklisted[indexFs] = 0; // pas blacklistée
+        historyListIndex      = indexFs;
+        indexFs++;
+
+        // Marque de fin logique (en RAM)
+        HFreqs[indexFs]       = 0;
+        HCount[indexFs]       = 0;
+        HBlacklisted[indexFs] = 0xFF;
+    } else {
+        // Mémoire pleine → on peut choisir d’écraser le plus ancien
+        indexFs = 0;
+        HFreqs[indexFs]       = peak.f;
+        HCount[indexFs]       = 1;
+        HBlacklisted[indexFs] = 0;
+        historyListIndex      = indexFs;
     }
-    
-/*     /////////////////////////DEBUG//////////////////////////
-    char str[200] = "";
-    for (uint8_t i = 0; i < 3; i++) {
-    sprintf(str,"%d iFS %d HLi %d BL %d \r\n",HFreqs[i],indexFs,historyListIndex,HCount[i]);LogUart(str); }
-    sprintf(str,"\r\n");LogUart(str); 
-    /////////////////////////DEBUG////////////////////////// */
+
+    historyScrollOffset = 0;
 }
+
 
 
 static void ToggleRX(bool on) {
@@ -1344,10 +1363,10 @@ static void DrawF(uint32_t f) {
     // ------------------------------------------------------------
     if (classic) {
         if (ShowLines == 0) ArrowLine = 0; //Draw nothing
-        if (ShowLines == 1) {UI_DisplayFrequency(line1, 0, 0, 0);ArrowLine = 2;}
-        if (ShowLines > 1) {UI_PrintStringSmall(line1, 1, 1, 0,1); ArrowLine = 1;}
-        if (ShowLines > 2) { UI_PrintStringSmall(line2, 1, 1, 1,1); ArrowLine = 2; }
-        if (ShowLines > 3) { UI_PrintStringSmall(line3, 1, 1, 2,1); ArrowLine = 3; }
+        if (ShowLines == 1) {UI_DisplayFrequency(line1, 0, 0, 0);   ArrowLine = 2;}
+        if (ShowLines > 1)  {UI_PrintStringSmall(line1, 1, 1, 0,1); ArrowLine = 1;}
+        if (ShowLines > 2)  {UI_PrintStringSmall(line2, 1, 1, 1,1); ArrowLine = 2; }
+        if (ShowLines > 3)  {UI_PrintStringSmall(line3, 1, 1, 2,1); ArrowLine = 3; }
     } else {
         DrawMeter(6);
         if (StringCode[0]) {UI_PrintStringSmall(line1, 1, 1, 0,1);}
@@ -1738,6 +1757,22 @@ static void OnKeyDown(uint8_t key) {
                   case 10: // ClearHistory
                         if (isKey3) ClearHistory();
                       break;
+                  case 11:
+                      if (isKey3) {
+                          SpectrumMaxDelay += 1;
+                          if (SpectrumMaxDelay > 60) SpectrumMaxDelay = 1; //(1=30s)
+                      } else {
+                          if (SpectrumMaxDelay <= 1) SpectrumMaxDelay = 60;
+                          else SpectrumMaxDelay -= 2;
+                      }
+
+                      if (SpectrumMaxDelay <= SpectrumDelay) {
+                            SpectrumMaxDelay = SpectrumDelay + 1;
+                      if (SpectrumMaxDelay > 60)
+                            SpectrumMaxDelay = 60;
+    }
+                      break;
+
               }
             
               if (isKey3 || redrawNeeded) { //TO REMOVE MAYBE
@@ -2301,61 +2336,86 @@ static void UpdateScan() {
   }
   newScanStart = true;
 }
+uint32_t spectrumElapsedCount = 0;
 
 static void UpdateListening(void) { // called every 10ms
     static uint32_t stableFreq = 1;
     static uint16_t stableCount = 0;
+    
+
     uint16_t rssi = GetRssi();
     scanInfo.rssi = rssi;
-    uint16_t count = GetStepsCount()+1;
+    uint16_t count = GetStepsCount() + 1;
     uint16_t i = peak.i;
 
+    // --- Mise à jour du buffer RSSI ---
     if (count > 128) {
-        uint16_t pixel = (uint32_t) i * 128 / count;
+        uint16_t pixel = (uint32_t)i * 128 / count;
         rssiHistory[pixel] = rssi;
     } else {
-          uint16_t j;    
-          uint16_t base = 128 / count;
-          uint16_t rem  = 128 % count;
-          uint16_t startIndex = i * base + (i < rem ? i : rem);
-          uint16_t width      = base + (i < rem ? 1 : 0);
-          uint16_t endIndex   = startIndex + width;
-          for (j = startIndex; j < endIndex; ++j) {rssiHistory[j] = rssi;} 
-      }
-      
+        uint16_t j;
+        uint16_t base = 128 / count;
+        uint16_t rem  = 128 % count;
+        uint16_t startIndex = i * base + (i < rem ? i : rem);
+        uint16_t width      = base + (i < rem ? 1 : 0);
+        uint16_t endIndex   = startIndex + width;
+        for (j = startIndex; j < endIndex; ++j) {
+            rssiHistory[j] = rssi;
+        }
+    }
 
-    // Détection de fréquence stable
+    // --- Détection de fréquence stable ---
     if (peak.f == stableFreq) {
         if (++stableCount >= 50) {  // ~500ms
             if (!SpectrumMonitor) FillfreqHistory();
             stableCount = 0;
-            // turn on green led only if screen brightness is over 7
-            if(gEeprom.BACKLIGHT_MAX > 5)
+            if (gEeprom.BACKLIGHT_MAX > 5)
                 BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 1);
         }
     } else {
         stableFreq = peak.f;
         stableCount = 0;
     }
-    if (isListening ||SpectrumMonitor||WaitSpectrum) UpdateNoiseOff();
+
+    if (isListening || SpectrumMonitor || WaitSpectrum)
+        UpdateNoiseOff();
     UpdateNoiseOn();
-    
-    if (gIsPeak) {
-        WaitSpectrum = SpectrumDelay;   // reset timer
+
+    // --- Gestion du délai maximal SpectrumMaxDelay ---
+    // 1 unité = 30 s = 3000 appels (10 ms chacun)
+    spectrumElapsedCount++;
+    uint32_t maxCount = (uint32_t)SpectrumMaxDelay * 500;
+    char str[64] = "";sprintf(str, "%d\r\n", spectrumElapsedCount );LogUart(str);
+
+    if (spectrumElapsedCount >= maxCount) {
+        // délai max atteint → reset
+        spectrumElapsedCount = 0;
+        ToggleRX(false);
+        Skip();
         return;
     }
 
-    if (WaitSpectrum > 61000) {
+    // --- Gestion du pic ---
+    if (gIsPeak) {
+        WaitSpectrum = SpectrumDelay;   // reset timer
+        spectrumElapsedCount = 0;       // on repart à zéro
         return;
     }
+
+    if (WaitSpectrum > 61000)
+        return;
+
     if (WaitSpectrum > 10) {
         WaitSpectrum -= 10;
         return;
     }
-    // timer écoulé
+
+    // --- Timer écoulé ---
     WaitSpectrum = 0;
     ResetScanStats();
+    spectrumElapsedCount = 0; // reset après cycle
 }
+
 
 
 static void Tick() {
@@ -2763,6 +2823,10 @@ static void GetParametersText(uint8_t index, char *buffer) {
             break;
         case 10:
             sprintf(buffer, "CLEAR HISTORY: 3");
+            break;
+        case 11:
+            if (SpectrumMaxDelay <= 30) sprintf(buffer, "SpectrumMaxDelay:%2us", SpectrumMaxDelay );
+              else sprintf(buffer, "SpectrumMaxDelay:oo");
             break;
         default:
             // Gestion d'un index inattendu (optionnel)
