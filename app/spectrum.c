@@ -43,7 +43,7 @@ bool gCounthistory = 1;                         // 10
 uint8_t SpectrumMaxDelay = 255;                 // 12
 #define PARAMETER_COUNT 12
 ////////////////////////////////////////////////////////////////////
-
+uint32_t spectrumElapsedCount = 2;
 
 
 
@@ -908,7 +908,7 @@ static void UpdateDBMaxAuto() {
     }
 
     if (scanInfo.rssiMin > 0) {
-        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -100, 50);
+        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -160, 50);
     }
 }
 
@@ -2336,7 +2336,7 @@ static void UpdateScan() {
   }
   newScanStart = true;
 }
-uint32_t spectrumElapsedCount = 0;
+
 
 static void UpdateListening(void) { // called every 10ms
     static uint32_t stableFreq = 1;
@@ -2384,9 +2384,8 @@ static void UpdateListening(void) { // called every 10ms
     // --- Gestion du délai maximal SpectrumMaxDelay ---
     // 1 unité = 30 s = 3000 appels (10 ms chacun)
     spectrumElapsedCount++;
-    uint32_t maxCount = (uint32_t)SpectrumMaxDelay * 500;
-    char str[64] = "";sprintf(str, "%d\r\n", spectrumElapsedCount );LogUart(str);
-
+    uint32_t maxCount = (uint32_t)SpectrumMaxDelay * 3000;
+    
     if (spectrumElapsedCount >= maxCount) {
         // délai max atteint → reset
         spectrumElapsedCount = 0;
@@ -2398,7 +2397,6 @@ static void UpdateListening(void) { // called every 10ms
     // --- Gestion du pic ---
     if (gIsPeak) {
         WaitSpectrum = SpectrumDelay;   // reset timer
-        spectrumElapsedCount = 0;       // on repart à zéro
         return;
     }
 
@@ -2413,7 +2411,6 @@ static void UpdateListening(void) { // called every 10ms
     // --- Timer écoulé ---
     WaitSpectrum = 0;
     ResetScanStats();
-    spectrumElapsedCount = 0; // reset après cycle
 }
 
 
