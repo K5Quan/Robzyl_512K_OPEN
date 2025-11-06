@@ -43,7 +43,7 @@ bool gCounthistory = 1;                         // 10
 uint8_t SpectrumMaxDelay = 255;                 // 12
 #define PARAMETER_COUNT 12
 ////////////////////////////////////////////////////////////////////
-uint32_t spectrumElapsedCount = 2;
+uint32_t spectrumElapsedCount = 255;
 
 
 
@@ -896,7 +896,7 @@ static void UpdateDBMaxAuto() {
   static uint8_t z = 2;
   int newDbMax;
     if (scanInfo.rssiMax > 0) {
-        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -100, 50);
+        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -120, 50);
 
         if (newDbMax > settings.dbMax + z) {
             settings.dbMax = settings.dbMax + z;   // montée limitée
@@ -1208,6 +1208,9 @@ switch(SpectrumMonitor) {
 
   if (WaitSpectrum > 0 && WaitSpectrum <61000){len = sprintf(&String[pos],"%d", WaitSpectrum/1000);pos += len;}
   else if(WaitSpectrum > 61000){len = sprintf(&String[pos],"oo");pos += len;} //locked
+  
+  if (spectrumElapsedCount > 0 ){len = sprintf(&String[pos],"%d", spectrumElapsedCount/100);pos += len;}
+  
   GUI_DisplaySmallest(String, 0, 1, true,true);
   BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4]);
 
