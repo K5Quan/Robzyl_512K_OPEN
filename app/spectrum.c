@@ -10,17 +10,49 @@
 #include "ui/main.h"
 #include "debugging.h"
 
+/*	
+          /////////////////////////DEBUG//////////////////////////
+          char str[64] = "";sprintf(str, "%d\r\n", Spectrum_state );LogUart(str);
+*/
 
 #ifdef ENABLE_SCREENSHOT
   #include "screenshot.h"
 #endif
 
-/*	
-          /////////////////////////DEBUG//////////////////////////
-          char str[64] = "";sprintf(str, "%d\r\n", Spectrum_state );LogUart(str);
-*/
+/* --- Add near top of file, po include'ach --- */
+extern char _sheap;   /* początek sterty (z linker script) */
+extern char _eheap;   /* limit sterty (z linker script) */
+
+static inline uint32_t get_sp(void)
+{
+    uint32_t sp;
+    __asm volatile ("mov %0, sp" : "=r" (sp));
+    return sp;
+}
+
+/* Przybliżona ilość wolnej pamięci bajtach między heap_start a SP.
+    */
+static uint32_t free_ram_bytes(void)
+{
+    uint32_t sp = get_sp();
+    uint32_t heap_start = (uint32_t)&_sheap;
+    uint32_t heap_limit = (uint32_t)&_eheap;
+
+    if (sp <= heap_start) return 0;
+    uint32_t free = sp - heap_start;
+
+    uint32_t max_free = (heap_limit > heap_start) ? (heap_limit - heap_start) : 0;
+    if (free > max_free) free = max_free;
+
+    return free;
+}
+
 #define MAX_VISIBLE_LINES 6
-#define HISTORY_SIZE 250	
+#define HISTORY_SIZE 250
+
+/*   */
+static volatile bool gSpectrumChangeRequested = false;
+static volatile uint8_t gRequestedSpectrumState = 0;
 
 uint32_t HFreqs[HISTORY_SIZE]= {0};
 uint8_t HCount[HISTORY_SIZE]= {0};
@@ -40,12 +72,13 @@ uint32_t gScanRangeStop = 13000000;             // 5
 //ClearSettings                                 // 9
 bool gCounthistory = 1;                         // 10
 //ClearHistory                                  // 11
-uint8_t SpectrumMaxDelay = 255;                 // 12
-#define PARAMETER_COUNT 12
+uint8_t MaxListenTime = 0;                      // 12
+//RAM                                           // 13
+#define PARAMETER_COUNT 13
 ////////////////////////////////////////////////////////////////////
-uint32_t spectrumElapsedCount = 255;
-
-
+uint32_t spectrumElapsedCount = 0;
+uint8_t IndexMaxLT = 0;
+#define LISTEN_STEP_COUNT 7
 
 static uint32_t lastReceivingFreq = 0;
 bool gIsPeak = false;
@@ -706,7 +739,6 @@ void FillfreqHistory(void) {
 }
 
 
-
 static void ToggleRX(bool on) {
     if(!on && SpectrumMonitor == 2) {isListening = 1;return;}
     isListening = on;
@@ -1206,10 +1238,10 @@ switch(SpectrumMonitor) {
       pos += len;
   }
 
-  if (WaitSpectrum > 0 && WaitSpectrum <61000){len = sprintf(&String[pos],"%d", WaitSpectrum/1000);pos += len;}
+  /* if (WaitSpectrum > 0 && WaitSpectrum <61000){len = sprintf(&String[pos],"%d ", WaitSpectrum/1000);pos += len;}
   else if(WaitSpectrum > 61000){len = sprintf(&String[pos],"oo");pos += len;} //locked
   
-  if (spectrumElapsedCount > 0 ){len = sprintf(&String[pos],"%d", spectrumElapsedCount/100);pos += len;}
+  if (spectrumElapsedCount > 0 ){len = sprintf(&String[pos],"%d ", spectrumElapsedCount/100);pos += len;} */
   
   GUI_DisplaySmallest(String, 0, 1, true,true);
   BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4]);
@@ -1228,6 +1260,8 @@ switch(SpectrumMonitor) {
       gStatusLine[i] = 0b00111110;
     }
   }
+  
+
 }
 
 static void formatHistory(char *buf, uint8_t index, uint16_t Channel, uint32_t freq) {
@@ -1327,7 +1361,8 @@ static void DrawF(uint32_t f) {
           strncat(line1, StringCode, sizeof(line1)-strlen(line1)-1);
       }
     }
-
+    int len = 0;
+    int pos = 0;
     char prefix[9] = "";
     if (ShowLines > 2 || !classic){
         if (appMode == SCAN_BAND_MODE) {
@@ -1342,13 +1377,34 @@ static void DrawF(uint32_t f) {
                     else
                         snprintf(prefix, sizeof(prefix), "ALL ");
                     if (isKnownChannel && channelName[0] && isListening) {
-                        snprintf(line2, sizeof(line2), "%-3s%s", prefix, channelName);
+                        len = sprintf(line2,"%-3s%s ", prefix, channelName);
+                        pos += len;
                     } else {
-                        snprintf(line2, sizeof(line2), "%s", prefix);
+                        len = sprintf(line2, "%s ", prefix);
+                        pos += len;
                     }
                 }
         if (appMode == SCAN_BAND_MODE) {
             snprintf(line2, sizeof(line2), "%-3s%s", prefix, BParams[bl].BandName);
+        }
+
+        if (WaitSpectrum > 0 && WaitSpectrum <61000) {
+              len = sprintf(&line2[pos],"E%d ", WaitSpectrum/1000);
+              pos += len;
+            }
+          else if(WaitSpectrum > 61000) {
+            len = sprintf(&line2[pos],"OO "); //locked
+            pos += len;
+          }
+          if (isListening) {
+              if (MaxListenTime){
+                len = sprintf(&line2[pos],"M%d ", spectrumElapsedCount/1000);
+                pos += len;
+              }
+              else {
+                len = sprintf(&line2[pos],"R%d ", spectrumElapsedCount/1000); //elapsed receive time
+                pos += len;
+              }
         }
     } 
 
@@ -1448,6 +1504,7 @@ void nextFrequency833() {
 
 static void NextScanStep() {
     ++scanInfo.i;  
+    spectrumElapsedCount = 0;
     if (appMode==CHANNEL_MODE)
     { 
       int currentChannel = scanChannel[scanInfo.i];
@@ -1473,6 +1530,7 @@ static uint8_t CountValidHistoryItems() {
 
 static void Skip() {
     WaitSpectrum = 0;
+    spectrumElapsedCount = 0;
     gIsPeak = false;
     ToggleRX(false);
     NextScanStep();
@@ -1679,7 +1737,7 @@ static void OnKeyDown(uint8_t key) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
       // If we're in PARAMETERS_SELECT selection mode, use dedicated key logic
     if (currentState == PARAMETERS_SELECT) {
-   
+    
       switch (key) {
           case KEY_UP://PARAMETERS
                 if (parametersSelectedIndex > 0) {
@@ -1760,20 +1818,20 @@ static void OnKeyDown(uint8_t key) {
                   case 10: // ClearHistory
                         if (isKey3) ClearHistory();
                       break;
-                  case 11:
+                  
+                  case 11: 
                       if (isKey3) {
-                          SpectrumMaxDelay += 1;
-                          if (SpectrumMaxDelay > 60) SpectrumMaxDelay = 1; //(1=30s)
+                          IndexMaxLT++;
+                          if (IndexMaxLT > LISTEN_STEP_COUNT) IndexMaxLT = 0;
                       } else {
-                          if (SpectrumMaxDelay <= 1) SpectrumMaxDelay = 60;
-                          else SpectrumMaxDelay -= 2;
+                          if (IndexMaxLT == 0) IndexMaxLT = LISTEN_STEP_COUNT;
+                          else IndexMaxLT--;
                       }
+                      const uint16_t listenSteps[] = {0, 10, 30, 60, 300, 600, 1200, 1800}; //in s
+                      MaxListenTime = listenSteps[IndexMaxLT];
+                      break;
 
-                      if (SpectrumMaxDelay <= SpectrumDelay) {
-                            SpectrumMaxDelay = SpectrumDelay + 1;
-                      if (SpectrumMaxDelay > 60)
-                            SpectrumMaxDelay = 60;
-    }
+                  case 12: // RAM
                       break;
 
               }
@@ -1960,11 +2018,17 @@ static void OnKeyDown(uint8_t key) {
         }
     break;
   
-    case KEY_6:    //Next Mode
+/* next mode poprawione */
+case KEY_6:
     Spectrum_state++;
-      if(Spectrum_state > 4) Spectrum_state = 0;
-      //SYSTEM_DelayMs(2000);
-      APP_RunSpectrum(Spectrum_state);
+    if (Spectrum_state > 4) Spectrum_state = 0;
+    /* zamiast: APP_RunSpectrum(Spectrum_state);
+       ustawiamy prośbę o zmianę trybu i kończymy aktualne działanie pętli */
+    gRequestedSpectrumState = Spectrum_state;
+    gSpectrumChangeRequested = true;
+    /* spowoduj wyjście z wewnętrznej pętli APP_RunSpectrum (bez rekurencji) */
+    isInitialized = false;
+    spectrumElapsedCount = 0;
     break;
   
     case KEY_SIDE1:
@@ -2340,12 +2404,9 @@ static void UpdateScan() {
   newScanStart = true;
 }
 
-
 static void UpdateListening(void) { // called every 10ms
     static uint32_t stableFreq = 1;
     static uint16_t stableCount = 0;
-    
-
     uint16_t rssi = GetRssi();
     scanInfo.rssi = rssi;
     uint16_t count = GetStepsCount() + 1;
@@ -2367,7 +2428,7 @@ static void UpdateListening(void) { // called every 10ms
         }
     }
 
-    // --- Détection de fréquence stable ---
+    // Détection de fréquence stable
     if (peak.f == stableFreq) {
         if (++stableCount >= 50) {  // ~500ms
             if (!SpectrumMonitor) FillfreqHistory();
@@ -2384,14 +2445,11 @@ static void UpdateListening(void) { // called every 10ms
         UpdateNoiseOff();
     UpdateNoiseOn();
 
-    // --- Gestion du délai maximal SpectrumMaxDelay ---
-    // 1 unité = 30 s = 3000 appels (10 ms chacun)
-    spectrumElapsedCount++;
-    uint32_t maxCount = (uint32_t)SpectrumMaxDelay * 3000;
-    
-    if (spectrumElapsedCount >= maxCount) {
+    spectrumElapsedCount+=10; //in ms
+    uint32_t maxCount = (uint32_t)MaxListenTime * 1000;
+
+    if (maxCount && spectrumElapsedCount >= maxCount) {
         // délai max atteint → reset
-        spectrumElapsedCount = 0;
         ToggleRX(false);
         Skip();
         return;
@@ -2410,12 +2468,10 @@ static void UpdateListening(void) { // called every 10ms
         WaitSpectrum -= 10;
         return;
     }
-
-    // --- Timer écoulé ---
+    // timer écoulé
     WaitSpectrum = 0;
     ResetScanStats();
 }
-
 
 
 static void Tick() {
@@ -2466,43 +2522,61 @@ static void Tick() {
   } 
 }
 
-void APP_RunSpectrum(uint8_t Spectrum_state) {
-  Mode mode;
-  if (StorePtt_Toggle_Mode) Ptt_Toggle_Mode = StorePtt_Toggle_Mode;
-  // Spectrum_state 1: MR Channel, 2: band scan, 3: range scan, 4: basic spectrum, 5:new scan range 0: no spectrum
-  if (Spectrum_state == 4) mode = FREQUENCY_MODE ;
-  if (Spectrum_state == 3) mode = SCAN_RANGE_MODE ;
-  if (Spectrum_state == 2) mode = SCAN_BAND_MODE ;
-  if (Spectrum_state == 1) mode = CHANNEL_MODE ;
-  EEPROM_WriteBuffer(0x1D00, &Spectrum_state);
-  if (!Key_1_pressed)LoadSettings();
-  appMode = mode;
-  ResetModifiers();
-  if (appMode==CHANNEL_MODE)LoadValidMemoryChannels();
-  if (appMode==FREQUENCY_MODE) {
-    currentFreq = initialFreq = gTxVfo->pRX->Frequency;
-      gScanRangeStart = currentFreq - (GetBW() >> 1);
-      gScanRangeStop  = currentFreq + (GetBW() >> 1);
-  }
-  BackupRegisters();
-  uint8_t CodeType = gTxVfo->pRX->CodeType;
-	uint8_t Code     = gTxVfo->pRX->Code;
-  BK4819_SetCDCSSCodeWord(DCS_GetGolayCodeWord(CodeType, Code));
-  ResetInterrupts();
-  // turn of GREEN LED if spectrum was started during active RX
-  BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
-  isListening = true; // to turn off RX later
-  newScanStart = true;
-  //RADIO_SetModulation(settings.modulationType = MODULATION_FM);
-  //BK4819_SetFilterBandwidth(settings.listenBw, false);
-  AutoAdjustFreqChangeStep();
-  RelaunchScan();
-  for (int i = 0; i < 128; ++i) {rssiHistory[i] = 0;}
-  isInitialized = true;
-  historyListActive = false;  
-  while (isInitialized) {
-    Tick();
-  }
+
+/*  APP_RunSpectrum(…)  wersja zewnętrznej pętli restartującej */
+void APP_RunSpectrum(uint8_t Spectrum_state)
+{
+    for (;;) { /* pętla pozwalająca na restart bez rekurencji */
+        Mode mode;
+        if (Spectrum_state == 4) mode = FREQUENCY_MODE ;
+        else if (Spectrum_state == 3) mode = SCAN_RANGE_MODE ;
+        else if (Spectrum_state == 2) mode = SCAN_BAND_MODE ;
+        else if (Spectrum_state == 1) mode = CHANNEL_MODE ;
+        else mode = FREQUENCY_MODE; /* safe default */
+
+        EEPROM_WriteBuffer(0x1D00, &Spectrum_state);
+        if (!Key_1_pressed) LoadSettings();
+        appMode = mode;
+        ResetModifiers();
+        if (appMode==CHANNEL_MODE) LoadValidMemoryChannels();
+        if (appMode==FREQUENCY_MODE) {
+            currentFreq = initialFreq = gTxVfo->pRX->Frequency;
+            gScanRangeStart = currentFreq - (GetBW() >> 1);
+            gScanRangeStop  = currentFreq + (GetBW() >> 1);
+        }
+        BackupRegisters();
+        uint8_t CodeType = gTxVfo->pRX->CodeType;
+        uint8_t Code     = gTxVfo->pRX->Code;
+        BK4819_SetCDCSSCodeWord(DCS_GetGolayCodeWord(CodeType, Code));
+        ResetInterrupts();
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
+        isListening = true;
+        newScanStart = true;
+        AutoAdjustFreqChangeStep();
+        RelaunchScan();
+        for (int i = 0; i < 128; ++i) { rssiHistory[i] = 0; }
+        isInitialized = true;
+        historyListActive = false;
+
+        /* główna pętla - działa dopóki isInitialized==true */
+        while (isInitialized) {
+            Tick();
+        }
+
+        /* Po wyjściu z pętli (np. isInitialized ustawione na false przez klawisz) */
+        if (gSpectrumChangeRequested) {
+            /* pobierz żądany stan i przygotuj restart bez rekurencji */
+            Spectrum_state = gRequestedSpectrumState;
+            gSpectrumChangeRequested = false;
+            /* przed restartem możesz wykonać czyszczenie, restore itp. */
+            RestoreRegisters(); /* opcjonalnie */
+            continue; /* restartujemy konfigurację dla nowego stanu w tej samej funkcji */
+        } else {
+            /* brak żądania restartu -> kończymy funkcję */
+            RestoreRegisters();
+            break;
+        }
+    } /* end for(;;) */
 }
 
 void LoadValidMemoryChannels(void)
@@ -2580,6 +2654,7 @@ typedef struct {
     uint16_t R19;                      // Disable MIC AGC
     uint16_t R73;                      // AFC range select
     uint16_t SpectrumDelay;
+    uint16_t MaxListenTime;
 } SettingsEEPROM;
 
 
@@ -2610,6 +2685,7 @@ static void LoadSettings()
   validScanListCount = 0;
   ShowLines = eepromData.ShowLines;
   SpectrumDelay = eepromData.SpectrumDelay;
+  MaxListenTime = eepromData.MaxListenTime;
   ChannelAttributes_t att;
   for (int i = 0; i < MR_CHANNEL_LAST+1; i++) {
     att = gMR_ChannelAttributes[i];
@@ -2640,6 +2716,7 @@ static void SaveSettings()
   eepromData.scanStepIndex = settings.scanStepIndex;
   eepromData.ShowLines = ShowLines;
   eepromData.SpectrumDelay = SpectrumDelay;
+  eepromData.MaxListenTime = MaxListenTime;
   for (int i = 0; i < 32; i++) { 
       eepromData.BPRssiTriggerLevelUp[i] = BPRssiTriggerLevelUp[i];
       if (settings.bandEnabled[i]) eepromData.bandListFlags |= (1 << i);
@@ -2693,6 +2770,7 @@ static void ClearSettings()
   settings.scanStepIndex = S_STEP_500kHz;
   ShowLines = 2;
   SpectrumDelay = 0;
+  MaxListenTime = 0;
   for (int i = 0; i < 32; i++) { 
       BPRssiTriggerLevelUp[i] = 5;
       settings.bandEnabled[i] = 0;
@@ -2825,9 +2903,15 @@ static void GetParametersText(uint8_t index, char *buffer) {
             sprintf(buffer, "CLEAR HISTORY: 3");
             break;
         case 11:
-            if (SpectrumMaxDelay <= 30) sprintf(buffer, "SpectrumMaxDelay:%2us", SpectrumMaxDelay );
-              else sprintf(buffer, "SpectrumMaxDelay:oo");
+            static const char *labels[] = {"OFF","10s","30s", "1m", "5m", "10m", "20m", "30m"};
+            sprintf(buffer, "MaxListenTime:%s", labels[IndexMaxLT]);
             break;
+
+        case 12:
+            uint32_t free = free_ram_bytes();
+            sprintf(buffer, "%uB", (unsigned)free);
+            break;
+
         default:
             // Gestion d'un index inattendu (optionnel)
             buffer[0] = '\0';

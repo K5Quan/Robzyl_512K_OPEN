@@ -170,8 +170,22 @@ void RADIO_ConfigureChannel(const unsigned int configure)
 
 		// ***************
 
-		EEPROM_ReadBuffer(base + 8, data, sizeof(data));
+		EEPROM_ReadBuffer(base + 8, data, sizeof(data)); // + 8 :SKIP Freq and OFFSET
+  
+/*
+  ul32 freq;
+  ul32 offset; 
+  u8 rxcode; 																						data 0
+  u8 txcode;																						data 1
+  u8 txcodeflag:4, rxcodeflag:4;																	data 2
 
+  u8 modulation:4, offsetDir:4;																		data 3			
+  u8 __UNUSED1:1,bandwidth_ext:2, busyChLockout:1, txpower:2, bandwidth:1, freq_reverse:1;			data 4			
+  u8 __UNUSED2;																						data 5			
+  u8 step;																							data 6		
+  u8 scrambler;																						data 7			
+
+*/
 		tmp = data[3] & 0x0F;
 		if (tmp > TX_OFFSET_FREQUENCY_DIRECTION_SUB)
 			tmp = 0;
