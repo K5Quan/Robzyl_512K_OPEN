@@ -377,6 +377,9 @@ static void HandleFunction(void)
 
 void APP_StartListening(FUNCTION_Type_t Function)
 {
+
+	//VFO sensitivity test KOLYAN
+ 	BK4819_WriteRegister(BK4819_REG_13, 0x03BE);
 	const unsigned int chan = 0;
 	if (gFmRadioMode)
 		BK1080_Init(0, false);

@@ -166,7 +166,6 @@ typedef struct SpectrumSettings {
   int16_t dbMin;
   int16_t dbMax;  
   ModulationMode_t modulationType;
-  bool backlightAlwaysOn;
   int scanList;
   bool scanListEnabled[15];
   bool bandEnabled[32];

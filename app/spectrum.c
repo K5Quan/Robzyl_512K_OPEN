@@ -8,7 +8,7 @@
 #include "action.h"
 #include "bands.h"
 #include "ui/main.h"
-#include "debugging.h"
+//#include "debugging.h"
 
 /*	
           /////////////////////////DEBUG//////////////////////////
@@ -79,7 +79,7 @@ uint8_t MaxListenTime = 0;                      // 12
 uint32_t spectrumElapsedCount = 0;
 uint8_t IndexMaxLT = 0;
 #define LISTEN_STEP_COUNT 7
-
+const uint16_t listenSteps[] = {0, 10, 30, 60, 300, 600, 1200, 1800}; //in s
 static uint32_t lastReceivingFreq = 0;
 bool gIsPeak = false;
 bool historyListActive = false;
@@ -173,7 +173,6 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
                              scanStepIndex: S_STEP_500kHz,
                              frequencyChangeStep: 80000,
                              rssiTriggerLevelUp: 20,
-							               backlightAlwaysOn: false,
                              bw: BK4819_FILTER_BW_WIDE,
                              listenBw: BK4819_FILTER_BW_NARROWEST,
                              modulationType: false,
@@ -742,7 +741,6 @@ void FillfreqHistory(void) {
 static void ToggleRX(bool on) {
     if(!on && SpectrumMonitor == 2) {isListening = 1;return;}
     isListening = on;
-    //BACKLIGHT_TurnOn();
     // automatically switch modulation & bw if known chanel
     if (on && isKnownChannel) {
         if(!gForceModulation) settings.modulationType = channelModulation;
@@ -762,7 +760,7 @@ static void ToggleRX(bool on) {
         //if (StopSpectrum == 0) StopSpectrum = 5000;
         //BK4819_SetFilterBandwidth(settings.listenBw, false);
         BK4819_WriteRegister(BK4819_REG_3F, BK4819_REG_02_CxCSS_TAIL);
-        gBacklightCountdown = 0;
+
     } else { 
         if(appMode!=CHANNEL_MODE) BK4819_WriteRegister(0x43, GetBWRegValueForScan());
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
@@ -925,10 +923,10 @@ LogUart(str); */
 
 
 static void UpdateDBMaxAuto() {
-  static uint8_t z = 2;
+  static uint8_t z = 3;
   int newDbMax;
     if (scanInfo.rssiMax > 0) {
-        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -120, 50);
+        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -130, 10);
 
         if (newDbMax > settings.dbMax + z) {
             settings.dbMax = settings.dbMax + z;   // montée limitée
@@ -940,7 +938,7 @@ static void UpdateDBMaxAuto() {
     }
 
     if (scanInfo.rssiMin > 0) {
-        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -160, 50);
+        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -160, -70);
     }
 }
 
@@ -1827,7 +1825,6 @@ static void OnKeyDown(uint8_t key) {
                           if (IndexMaxLT == 0) IndexMaxLT = LISTEN_STEP_COUNT;
                           else IndexMaxLT--;
                       }
-                      const uint16_t listenSteps[] = {0, 10, 30, 60, 300, 600, 1200, 1800}; //in s
                       MaxListenTime = listenSteps[IndexMaxLT];
                       break;
 
@@ -2355,13 +2352,17 @@ static void Render() {
 void HandleUserInput(void) {
     kbd.prev = kbd.current;
     kbd.current = GetKey();
-    
-    // ---- Anti-rebond / maintien ----
-    if (kbd.current != KEY_INVALID && kbd.current == kbd.prev) {kbd.counter++;}
-    else {kbd.counter = 0;}
+    // ---- Anti-rebond + répétition ----
+    if (kbd.current != KEY_INVALID && kbd.current == kbd.prev) {
+        kbd.counter++;
+    } else {
+          kbd.counter = 0;
+      }
 
-    if (kbd.counter == 2) {
-        
+if (kbd.counter == 2 || (kbd.counter > 12 && (kbd.counter % 20 == 0))) {
+    // 1ère détection à 2 * 10ms = 20ms
+    // Puis répétition toutes les 100ms (10 * 10ms)
+       
         switch (currentState) {
             case SPECTRUM:
                 OnKeyDown(kbd.current);
@@ -2448,7 +2449,7 @@ static void UpdateListening(void) { // called every 10ms
     spectrumElapsedCount+=10; //in ms
     uint32_t maxCount = (uint32_t)MaxListenTime * 1000;
 
-    if (maxCount && spectrumElapsedCount >= maxCount) {
+    if (MaxListenTime && spectrumElapsedCount >= maxCount) {
         // délai max atteint → reset
         ToggleRX(false);
         Skip();
@@ -2477,9 +2478,7 @@ static void UpdateListening(void) { // called every 10ms
 static void Tick() {
   if (gNextTimeslice_500ms) {
     if (gBacklightCountdown > 0)
-      if (--gBacklightCountdown == 0)
-				if (!settings.backlightAlwaysOn)
-					BACKLIGHT_TurnOff();   // turn backlight off
+      if (--gBacklightCountdown == 0)	BACKLIGHT_TurnOff();
     gNextTimeslice_500ms = false;
   }
   
@@ -2654,7 +2653,7 @@ typedef struct {
     uint16_t R19;                      // Disable MIC AGC
     uint16_t R73;                      // AFC range select
     uint16_t SpectrumDelay;
-    uint16_t MaxListenTime;
+    uint8_t IndexMaxLT;
 } SettingsEEPROM;
 
 
@@ -2685,7 +2684,8 @@ static void LoadSettings()
   validScanListCount = 0;
   ShowLines = eepromData.ShowLines;
   SpectrumDelay = eepromData.SpectrumDelay;
-  MaxListenTime = eepromData.MaxListenTime;
+  IndexMaxLT = eepromData.IndexMaxLT;
+  MaxListenTime = listenSteps[IndexMaxLT];
   ChannelAttributes_t att;
   for (int i = 0; i < MR_CHANNEL_LAST+1; i++) {
     att = gMR_ChannelAttributes[i];
@@ -2716,7 +2716,7 @@ static void SaveSettings()
   eepromData.scanStepIndex = settings.scanStepIndex;
   eepromData.ShowLines = ShowLines;
   eepromData.SpectrumDelay = SpectrumDelay;
-  eepromData.MaxListenTime = MaxListenTime;
+  eepromData.IndexMaxLT = IndexMaxLT;
   for (int i = 0; i < 32; i++) { 
       eepromData.BPRssiTriggerLevelUp[i] = BPRssiTriggerLevelUp[i];
       if (settings.bandEnabled[i]) eepromData.bandListFlags |= (1 << i);
@@ -2725,11 +2725,8 @@ static void SaveSettings()
   eepromData.R29 = BK4819_ReadRegister(BK4819_REG_29);
   eepromData.R19 = BK4819_ReadRegister(BK4819_REG_19);
   eepromData.R73 = BK4819_ReadRegister(BK4819_REG_73);
-
-  //char str[64] = "";sprintf(str, "R40:%d R29:%d R19:%d R73:%d \r\n", eepromData.R40, eepromData.R29, eepromData.R19, eepromData.R73 );LogUart(str);
   
-  
-  //R40:13520 R29:43840 R19:4161 R73:18066
+  //R40:13520 R29:43840 R19:4161 R73:18066 R13:958
 
   // Write in 8-byte chunks
   for (uint16_t addr = 0; addr < sizeof(eepromData); addr += 8) 

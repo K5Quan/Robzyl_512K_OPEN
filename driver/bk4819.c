@@ -119,11 +119,7 @@ void BK4819_Init(void)
 	BK4819_WriteRegister(BK4819_REG_33, 0x9000);
 	BK4819_WriteRegister(BK4819_REG_3F, 0);
 	BK4819_WriteRegister(BK4819_REG_73, 0x4692);
-	//VFO sensitivity test
- 	BK4819_WriteRegister(BK4819_REG_40, 0x34D0);
- 	BK4819_WriteRegister(BK4819_REG_29, 0xAB40);
- 	BK4819_WriteRegister(BK4819_REG_19, 0x1041);
- 	BK4819_WriteRegister(BK4819_REG_73, 0x4692);
+
 }
 
 static uint16_t BK4819_ReadU16(void) {

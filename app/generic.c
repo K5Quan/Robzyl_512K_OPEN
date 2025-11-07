@@ -111,7 +111,7 @@ void GENERIC_Key_PTT(bool bKeyPressed)
 	// PTT pressed
 
 	// set maximum squelch to protect the screen from glitching
-	BK4819_SetupSquelch(255, 255, 127, 127, 255, 255);
+	//BK4819_SetupSquelch(255, 255, 127, 127, 255, 255);
 
 	if (gFM_ScanState != FM_SCAN_OFF)
 	{	// FM radio is scanning .. stop
