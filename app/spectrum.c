@@ -123,6 +123,8 @@ struct FrequencyBandInfo {
 };
 bool isBlacklistApplied;
 bool saved_params= false;
+bool saved_history= false;
+
 uint32_t cdcssFreq;
 uint16_t ctcssFreq;
 uint8_t refresh = 0;
@@ -1277,10 +1279,21 @@ static bool HandlePopup(void) {
     if (saved_params) {
         UI_DisplayPopup("Params Saved");
         saved_params = 0;
+        osdPopupTimer = 1500;
         ST7565_BlitFullScreen();
-        SYSTEM_DelayMs(200);
+        SYSTEM_DelayMs(1000);
         return true;
     }
+#ifdef ENABLE_EEPROM_512K
+     if (saved_history) {
+        UI_DisplayPopup("History Saved");
+        saved_history = 0;
+        osdPopupTimer = 2000;
+        ST7565_BlitFullScreen();
+        SYSTEM_DelayMs(1000);
+        return true;
+    }
+    #endif
     return false;
 }
 
@@ -1908,8 +1921,17 @@ static void OnKeyDown(uint8_t key) {
       break;
      
      case KEY_7:
-        SaveSettings(); 
-        saved_params= true;
+
+        if (historyListActive) {
+#ifdef ENABLE_EEPROM_512K
+          WriteHistory();
+          saved_history = true;
+#endif
+        }
+        else {
+          SaveSettings(); 
+          saved_params= true;
+        }
         break;
      
      case KEY_2: //FREE
@@ -1943,9 +1965,15 @@ static void OnKeyDown(uint8_t key) {
         if (historyListIndex > 0) {
         historyListIndex--;
         if (historyListIndex < historyScrollOffset) {historyScrollOffset = historyListIndex;}
-        if (SpectrumMonitor > 0) SetF(HFreqs[historyListIndex]);
+        if (SpectrumMonitor) SetF(HFreqs[historyListIndex]);
         }
     } else {
+/*         if(SpectrumMonitor) {
+          Skip();
+          SetF(scanInfo.f);
+          DrawF(scanInfo.f);
+          break;
+        } */
         if (appMode==SCAN_BAND_MODE) {
             ToggleScanList(bl, 1);
             settings.bandEnabled[bl+1]= true;
@@ -1975,10 +2003,18 @@ static void OnKeyDown(uint8_t key) {
         if (historyListIndex < CountValidHistoryItems()-1) {
         historyListIndex++;
         if (historyListIndex < historyScrollOffset) {historyScrollOffset = historyListIndex;}
-        if (SpectrumMonitor > 0) SetF(HFreqs[historyListIndex]);
+        if (SpectrumMonitor) SetF(HFreqs[historyListIndex]);
         }
     }
     else {
+/*         if(SpectrumMonitor) {
+          --scanInfo.i;
+          --scanInfo.i;
+          Skip();
+          SetF(scanInfo.f);
+          DrawF(scanInfo.f);
+          break;
+        } */
         if (appMode==SCAN_BAND_MODE) {
             ToggleScanList(bl, 1);
             settings.bandEnabled[bl-1]= true;
@@ -2113,7 +2149,7 @@ static void OnKeyDownFreqInput(uint8_t key) {
   case KEY_STAR:
     UpdateFreqInput(key);
     break;
-  case KEY_EXIT:
+  case KEY_EXIT: //EXIT from freq input
     if (freqInputIndex == 0) {
       SetState(previousState);
       WaitSpectrum = 0;
@@ -2202,7 +2238,7 @@ void OnKeyDownStill(KEY_Code_t key) {
       case KEY_MENU:
           stillEditRegs = !stillEditRegs;
       break;
-      case KEY_EXIT:
+      case KEY_EXIT: //EXIT from regs
         if (stillEditRegs) {
           stillEditRegs = false;
         break;
@@ -2499,7 +2535,7 @@ static void Tick() {
     if (isListening || SpectrumMonitor || WaitSpectrum) UpdateListening(); 
   }
 
-  if(!isListening && gIsPeak) {
+  if(!isListening && gIsPeak && !SpectrumMonitor) {
      LookupChannelInfo();
      SetF(peak.f);
      ToggleRX(true);
@@ -2731,9 +2767,7 @@ static void SaveSettings()
   // Write in 8-byte chunks
   for (uint16_t addr = 0; addr < sizeof(eepromData); addr += 8) 
     EEPROM_WriteBuffer(addr + 0x1D10, ((uint8_t*)&eepromData) + addr);
-#ifdef ENABLE_EEPROM_512K
-  WriteHistory();
-#endif
+
 }
 
 static void ClearHistory() 
