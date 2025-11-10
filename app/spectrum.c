@@ -48,7 +48,7 @@ static uint32_t free_ram_bytes(void)
 }
 
 #define MAX_VISIBLE_LINES 6
-#define HISTORY_SIZE 250
+#define HISTORY_SIZE 100
 
 /*   */
 static volatile bool gSpectrumChangeRequested = false;
@@ -123,9 +123,6 @@ struct FrequencyBandInfo {
     uint32_t middle;
 };
 bool isBlacklistApplied;
-bool saved_params= false;
-bool saved_history= false;
-
 uint32_t cdcssFreq;
 uint16_t ctcssFreq;
 uint8_t refresh = 0;
@@ -359,7 +356,7 @@ void ShowOSDPopup(const char *str)
 {
     strncpy(osdPopupText, str, sizeof(osdPopupText)-1);
     osdPopupText[sizeof(osdPopupText)-1] = '\0';  // Zabezpieczenie przed przepełnieniem
-    osdPopupTimer = 1000;
+    osdPopupTimer = 800;
     UI_DisplayPopup(osdPopupText);
     ST7565_BlitFullScreen();
 }
@@ -575,6 +572,7 @@ void ReadHistory(void) {
         HBlacklisted[position] = History.HBlacklisted;
         indexFs = position + 1;
     }
+    ShowOSDPopup("History Loaded");
 }
 
 
@@ -594,6 +592,7 @@ void WriteHistory(void) {
     History.HBlacklisted = 0xFF;
     EEPROM_WriteBuffer(ADRESS_HISTORY + indexFs * sizeof(HistoryStruct),
                        (uint8_t *)&History);
+    ShowOSDPopup("History Saved");
 }
 
 #endif
@@ -711,7 +710,7 @@ void FillfreqHistory(void) {
             } else if (!gCounthistory) {
                 HCount[i]++;
             }
-            historyListIndex = i;
+            //historyListIndex = i;
             return;
         }
     }
@@ -721,7 +720,8 @@ void FillfreqHistory(void) {
         HFreqs[indexFs]       = peak.f;
         HCount[indexFs]       = 1;
         HBlacklisted[indexFs] = 0; // pas blacklistée
-        historyListIndex      = indexFs;
+        //historyListIndex      = indexFs;
+
         indexFs++;
 
         // Marque de fin logique (en RAM)
@@ -734,7 +734,7 @@ void FillfreqHistory(void) {
         HFreqs[indexFs]       = peak.f;
         HCount[indexFs]       = 1;
         HBlacklisted[indexFs] = 0;
-        historyListIndex      = indexFs;
+        //historyListIndex      = indexFs;
     }
 
     historyScrollOffset = 0;
@@ -777,7 +777,7 @@ static void ToggleRX(bool on) {
 
 // Scan info
 static void ResetScanStats() {
-  scanInfo.rssiMax = scanInfo.rssiMin + 5 ; 
+  scanInfo.rssiMax = scanInfo.rssiMin + 20 ; 
 }
 
 bool SingleBandCheck(void) {
@@ -929,7 +929,7 @@ static void UpdateDBMaxAuto() {
   static uint8_t z = 3;
   int newDbMax;
     if (scanInfo.rssiMax > 0) {
-        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -130, 10);
+        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -60, 10);
 
         if (newDbMax > settings.dbMax + z) {
             settings.dbMax = settings.dbMax + z;   // montée limitée
@@ -941,7 +941,7 @@ static void UpdateDBMaxAuto() {
     }
 
     if (scanInfo.rssiMin > 0) {
-        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -160, -70);
+        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -160, -80);
     }
 }
 
@@ -1277,29 +1277,6 @@ static void formatHistory(char *buf, uint8_t index, uint16_t Channel, uint32_t f
 }
 
 
-// ------------------ Popups ------------------
-static bool HandlePopup(void) {
-    if (saved_params) {
-        UI_DisplayPopup("Params Saved");
-        saved_params = 0;
-        osdPopupTimer = 1500;
-        ST7565_BlitFullScreen();
-        SYSTEM_DelayMs(1000);
-        return true;
-    }
-#ifdef ENABLE_EEPROM_512K
-     if (saved_history) {
-        UI_DisplayPopup("History Saved");
-        saved_history = 0;
-        osdPopupTimer = 2000;
-        ST7565_BlitFullScreen();
-        SYSTEM_DelayMs(1000);
-        return true;
-    }
-    #endif
-    return false;
-}
-
 // ------------------ Frequency string ------------------
 static void FormatFrequency(uint32_t f, char *buf, size_t buflen) {
     snprintf(buf, buflen, "%u.%05u", f / 100000, f % 100000);
@@ -1350,7 +1327,6 @@ static void BuildEnabledScanLists(char *buf, size_t buflen) {
 }
 
 static void DrawF(uint32_t f) {
-    if (HandlePopup()) return;
     if (f == 0) return;
 
     char freqStr[18];
@@ -1501,10 +1477,10 @@ static void DrawNums() {
     GUI_DisplaySmallest(String, 90, Bottom_print, false, true);
   }
   
-  if(isBlacklistApplied){
+/*   if(isBlacklistApplied){
     sprintf(String, "BL");
     GUI_DisplaySmallest(String, 60, Bottom_print, false, true);
-  }
+  } */
   
 }
 
@@ -1719,7 +1695,7 @@ static void OnKeyDown(uint8_t key) {
 #ifdef ENABLE_SCANLIST_SHOW_DETAIL
   if (currentState == SCANLIST_CHANNELS) {
     switch (key) {
-    case KEY_UP:
+    case KEY_UP: //SCANLIST DETAILS
         if (scanListChannelsSelectedIndex > 0) {
             scanListChannelsSelectedIndex--;
             if (scanListChannelsSelectedIndex < scanListChannelsScrollOffset) {
@@ -1852,8 +1828,12 @@ static void OnKeyDown(uint8_t key) {
 
               break;
           }
+        case KEY_7:
+          SaveSettings(); 
+        break;
+
         case KEY_EXIT: // Exit parameters menu to previous menu/state
-          SaveSettings();
+          //SaveSettings();
           SetState(SPECTRUM);
           RelaunchScan();
           ResetModifiers();
@@ -1926,12 +1906,10 @@ static void OnKeyDown(uint8_t key) {
         if (historyListActive) {
 #ifdef ENABLE_EEPROM_512K
           WriteHistory();
-          saved_history = true;
 #endif
         }
         else {
           SaveSettings(); 
-          saved_params= true;
         }
         break;
      
@@ -2067,11 +2045,8 @@ if (historyListActive) {
 case KEY_6:
     Spectrum_state++;
     if (Spectrum_state > 4) Spectrum_state = 0;
-    /* zamiast: APP_RunSpectrum(Spectrum_state);
-       ustawiamy prośbę o zmianę trybu i kończymy aktualne działanie pętli */
     gRequestedSpectrumState = Spectrum_state;
     gSpectrumChangeRequested = true;
-    /* spowoduj wyjście z wewnętrznej pętli APP_RunSpectrum (bez rekurencji) */
     isInitialized = false;
     spectrumElapsedCount = 0;
     break;
@@ -2090,12 +2065,19 @@ case KEY_6:
     case KEY_SIDE2:
     if (historyListActive) {
         HBlacklisted[historyListIndex] = !HBlacklisted[historyListIndex];
-        
+        //char str[64] = "";sprintf(str, "%d %d \r\n", HBlacklisted[historyListIndex],historyListIndex );LogUart(str);
         if (HBlacklisted[historyListIndex]) {
             ShowOSDPopup("BL added");
         } else {
             ShowOSDPopup("BL removed");
         }
+        uint8_t count = CountValidHistoryItems();
+        historyListIndex++;
+        if (historyListIndex >= count)
+            historyListIndex = 0;  // reboucle au début
+
+        if (historyListIndex < historyScrollOffset)
+            historyScrollOffset = historyListIndex;
         RenderHistoryList();
         gIsPeak = 0;
         ToggleRX(false);
@@ -2104,7 +2086,6 @@ case KEY_6:
         NextScanStep();
         break;
     }
-    
     else Blacklist();
     WaitSpectrum = 0;
     break;
@@ -2407,9 +2388,7 @@ void HandleUserInput(void) {
           kbd.counter = 0;
       }
 
-if (kbd.counter == 2 || (kbd.counter > 12 && (kbd.counter % 20 == 0))) {
-    // 1ère détection à 2 * 10ms = 20ms
-    // Puis répétition toutes les 100ms (10 * 10ms)
+if (kbd.counter == 2 || (kbd.counter > 22 && (kbd.counter % 20 == 0))) {
        
         switch (currentState) {
             case SPECTRUM:
@@ -2570,17 +2549,15 @@ static void Tick() {
   } 
 }
 
-
-/*  APP_RunSpectrum(…)  wersja zewnętrznej pętli restartującej */
 void APP_RunSpectrum(uint8_t Spectrum_state)
 {
-    for (;;) { /* pętla pozwalająca na restart bez rekurencji */
+    for (;;) {
         Mode mode;
         if (Spectrum_state == 4) mode = FREQUENCY_MODE ;
         else if (Spectrum_state == 3) mode = SCAN_RANGE_MODE ;
         else if (Spectrum_state == 2) mode = SCAN_BAND_MODE ;
         else if (Spectrum_state == 1) mode = CHANNEL_MODE ;
-        else mode = FREQUENCY_MODE; /* safe default */
+        else mode = FREQUENCY_MODE;
 
         EEPROM_WriteBuffer(0x1D00, &Spectrum_state);
         if (!Key_1_pressed) LoadSettings();
@@ -2606,25 +2583,20 @@ void APP_RunSpectrum(uint8_t Spectrum_state)
         isInitialized = true;
         historyListActive = false;
 
-        /* główna pętla - działa dopóki isInitialized==true */
         while (isInitialized) {
             Tick();
         }
 
-        /* Po wyjściu z pętli (np. isInitialized ustawione na false przez klawisz) */
         if (gSpectrumChangeRequested) {
-            /* pobierz żądany stan i przygotuj restart bez rekurencji */
             Spectrum_state = gRequestedSpectrumState;
             gSpectrumChangeRequested = false;
-            /* przed restartem możesz wykonać czyszczenie, restore itp. */
-            RestoreRegisters(); /* opcjonalnie */
-            continue; /* restartujemy konfigurację dla nowego stanu w tej samej funkcji */
+            RestoreRegisters(); 
+            continue;
         } else {
-            /* brak żądania restartu -> kończymy funkcję */
             RestoreRegisters();
             break;
         }
-    } /* end for(;;) */
+    } 
 }
 
 void LoadValidMemoryChannels(void)
@@ -2747,6 +2719,7 @@ static void LoadSettings()
   BK4819_WriteRegister(BK4819_REG_19, eepromData.R19);
   BK4819_WriteRegister(BK4819_REG_73, eepromData.R73);
 #ifdef ENABLE_EEPROM_512K
+if (gRequestedSpectrumState ==0) //only read once
   ReadHistory();
 #endif
 }
@@ -2783,7 +2756,7 @@ static void SaveSettings()
   // Write in 8-byte chunks
   for (uint16_t addr = 0; addr < sizeof(eepromData); addr += 8) 
     EEPROM_WriteBuffer(addr + 0x1D10, ((uint8_t*)&eepromData) + addr);
-
+  ShowOSDPopup("Params Saved");
 }
 
 static void ClearHistory() 
@@ -2793,8 +2766,8 @@ static void ClearHistory()
   memset(HBlacklisted,0,sizeof(HBlacklisted));
   historyListIndex = 0;
   historyScrollOffset = 0;
-  indexFs = HISTORY_SIZE;
   #ifdef ENABLE_EEPROM_512K
+  indexFs = HISTORY_SIZE;
   WriteHistory();
   #endif
   indexFs = 0;
@@ -2963,7 +2936,7 @@ static void GetParametersText(uint8_t index, char *buffer) {
 
         case 13:
             uint32_t free = free_ram_bytes();
-            sprintf(buffer, "%uB", (unsigned)free);
+            sprintf(buffer, "FREE RAM %uB", (unsigned)free);
             break;
 
         default:
