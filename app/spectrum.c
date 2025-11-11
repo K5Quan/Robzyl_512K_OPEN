@@ -88,6 +88,7 @@ bool gForceModulation = 0;
 bool classic = 1;
 uint8_t SlIndex = 0;
 uint8_t SpectrumMonitor = 0;
+uint8_t prevSpectrumMonitor = 0;
 bool Key_1_pressed = 0;
 uint16_t WaitSpectrum = 0; 
 uint32_t Last_Tuned_Freq = 44610000;
@@ -566,11 +567,12 @@ void ReadHistory(void) {
             indexFs = position;
             break;
         }
-
+      if (History.HFreqs){
         HFreqs[position] = History.HFreqs;
         HCount[position] = History.HCount;
         HBlacklisted[position] = History.HBlacklisted;
         indexFs = position + 1;
+      }
     }
     ShowOSDPopup("History Loaded");
 }
@@ -710,7 +712,7 @@ void FillfreqHistory(void) {
             } else if (!gCounthistory) {
                 HCount[i]++;
             }
-            //historyListIndex = i;
+            historyListIndex = i;
             return;
         }
     }
@@ -720,7 +722,7 @@ void FillfreqHistory(void) {
         HFreqs[indexFs]       = peak.f;
         HCount[indexFs]       = 1;
         HBlacklisted[indexFs] = 0; // pas blacklistée
-        //historyListIndex      = indexFs;
+        historyListIndex      = indexFs;
 
         indexFs++;
 
@@ -734,7 +736,7 @@ void FillfreqHistory(void) {
         HFreqs[indexFs]       = peak.f;
         HCount[indexFs]       = 1;
         HBlacklisted[indexFs] = 0;
-        //historyListIndex      = indexFs;
+        historyListIndex      = indexFs;
     }
 
     historyScrollOffset = 0;
@@ -1938,28 +1940,19 @@ static void OnKeyDown(uint8_t key) {
     break;
 
       
-    case KEY_UP:
-    
-if (historyListActive) {
-    uint8_t count = CountValidHistoryItems();
-    if (!count) return;
-        if (historyListIndex == 0)
-            historyListIndex = count - 1;  // reboucle à la fin
-        else
-            historyListIndex--;
-
-        if (historyListIndex < historyScrollOffset)
-            historyScrollOffset = historyListIndex;
-
-        if (SpectrumMonitor)
-            SetF(HFreqs[historyListIndex]);
-    } else {
-/*         if(SpectrumMonitor) {
-          Skip();
-          SetF(scanInfo.f);
-          DrawF(scanInfo.f);
-          break;
-        } */
+    case KEY_UP: //History
+      if (historyListActive) {
+          uint8_t count = CountValidHistoryItems();
+          SpectrumMonitor = 1; //Auto FL when moving in history
+          if (!count) return;
+              if (historyListIndex == 0)
+                  historyListIndex = count - 1;  // reboucle à la fin
+              else
+                  historyListIndex--;
+      
+              if (historyListIndex < historyScrollOffset) historyScrollOffset = historyListIndex;
+              SetF(HFreqs[historyListIndex]);
+      } else {
         if (appMode==SCAN_BAND_MODE) {
             ToggleScanList(bl, 1);
             settings.bandEnabled[bl+1]= true;
@@ -1986,25 +1979,14 @@ if (historyListActive) {
   case KEY_DOWN: //History
         if (historyListActive) {
             uint8_t count = CountValidHistoryItems();
-            if (!count) return;
+        SpectrumMonitor = 1; //Auto FL when moving in history
+        if (!count) return;
         historyListIndex++;
         if (historyListIndex >= count)
             historyListIndex = 0;  // reboucle au début
-
-        if (historyListIndex < historyScrollOffset)
-            historyScrollOffset = historyListIndex;
-
-        if (SpectrumMonitor)
-            SetF(HFreqs[historyListIndex]);
+        if (historyListIndex < historyScrollOffset) historyScrollOffset = historyListIndex;
+        SetF(HFreqs[historyListIndex]);
     } else {
-/*         if(SpectrumMonitor) {
-          --scanInfo.i;
-          --scanInfo.i;
-          Skip();
-          SetF(scanInfo.f);
-          DrawF(scanInfo.f);
-          break;
-        } */
         if (appMode==SCAN_BAND_MODE) {
             ToggleScanList(bl, 1);
             settings.bandEnabled[bl-1]= true;
@@ -2038,6 +2020,7 @@ if (historyListActive) {
         historyListActive = true;
         historyListIndex = 0;
         historyScrollOffset = 0;
+        prevSpectrumMonitor = SpectrumMonitor;
         }
     break;
   
@@ -2058,7 +2041,7 @@ case KEY_6:
         const char* modes[] = {"Normal", "Freq Lock", "Monitor"};
         sprintf(monitorText, "Mode: %s", modes[SpectrumMonitor]);
 	      ShowOSDPopup(monitorText);
-        if (SpectrumMonitor > 0) SetF(HFreqs[historyListIndex]);
+        //if (SpectrumMonitor > 0) SetF(HFreqs[historyListIndex]);
         if(SpectrumMonitor == 2) ToggleRX(1);
     break;
 
@@ -2071,13 +2054,13 @@ case KEY_6:
         } else {
             ShowOSDPopup("BL removed");
         }
-        uint8_t count = CountValidHistoryItems();
+/*         uint8_t count = CountValidHistoryItems();
         historyListIndex++;
         if (historyListIndex >= count)
             historyListIndex = 0;  // reboucle au début
 
         if (historyListIndex < historyScrollOffset)
-            historyScrollOffset = historyListIndex;
+            historyScrollOffset = historyListIndex; */
         RenderHistoryList();
         gIsPeak = 0;
         ToggleRX(false);
@@ -2103,20 +2086,23 @@ case KEY_6:
       }
       if (historyListActive == true) {
           Last_Tuned_Freq = HFreqs[historyListIndex];
-      } else Last_Tuned_Freq = peak.f;
+      } /* else Last_Tuned_Freq = peak.f;
       currentFreq = Last_Tuned_Freq;
       if(scanInfo.f != Last_Tuned_Freq) SetF(Last_Tuned_Freq);
-      scanInfo.f = Last_Tuned_Freq;
+      scanInfo.f = Last_Tuned_Freq; */
       SetState(STILL);      
   break;
 
-  case KEY_EXIT: //exit from spectrum
+  case KEY_EXIT: //exit from history
   
     if (historyListActive == true) {
       SetState(SPECTRUM);
       historyListActive = false;
+      SpectrumMonitor = prevSpectrumMonitor;
+      SetF(scanInfo.f);
       break;
-      }
+    }
+
     if (WaitSpectrum) {WaitSpectrum = 0;} //STOP wait
     DeInitSpectrum(0);
     break;
@@ -2150,7 +2136,7 @@ static void OnKeyDownFreqInput(uint8_t key) {
     }
     UpdateFreqInput(key);
     break;
-  case KEY_MENU:
+  case KEY_MENU: //OnKeyDownFreqInput
     if (tempFreq < RX_freq_min() || tempFreq > F_MAX) {
       break;
     }
@@ -2285,7 +2271,8 @@ void DrawMeter(int line) {
 static void RenderStill() {
   classic=1;
   char freqStr[18];
-  FormatFrequency(scanInfo.f, freqStr, sizeof(freqStr));
+  if (SpectrumMonitor) FormatFrequency(HFreqs[historyListIndex], freqStr, sizeof(freqStr));
+  else FormatFrequency(scanInfo.f, freqStr, sizeof(freqStr));
   UI_DisplayFrequency(freqStr, 0, 0, 0);
   DrawMeter(2);
   sLevelAttributes sLevelAtt;
