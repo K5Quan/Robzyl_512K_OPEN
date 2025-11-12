@@ -1361,11 +1361,14 @@ static void DrawF(uint32_t f) {
               ReadChannelName(channelFd,channelName);
               gNextTimeslice_1s = 0;
             }
-            if (enabledLists[0])
-                    snprintf(prefix, sizeof(prefix), "S%s ", enabledLists);
-                else
-                    snprintf(prefix, sizeof(prefix), "ALL ");
-                if (isKnownChannel && channelName[0] && isListening) {
+            if (enabledLists[0]) {
+                    len = sprintf(prefix, "S%s ", enabledLists);
+                    pos += len;
+            } else {
+                    len = sprintf(prefix, "ALL ");
+                    pos += len;
+              }
+              if (isKnownChannel && channelName[0] && isListening) {
                     len = sprintf(line2,"%-3s%s ", prefix, channelName);
                     pos += len;
                 } else {
@@ -1375,7 +1378,7 @@ static void DrawF(uint32_t f) {
             }
     
      pos = 0;
-
+        sprintf(line3b,">");
         if (WaitSpectrum > 0 && WaitSpectrum <61000) {
               len = sprintf(&line3b[pos],"End %d ", WaitSpectrum/1000);
               pos += len;
@@ -1407,7 +1410,7 @@ static void DrawF(uint32_t f) {
         if (ShowLines == 1) {UI_DisplayFrequency(line1,  0, 0, 0);   ArrowLine = 2;}
         if (ShowLines > 1)  {UI_PrintStringSmall(line1b, 1, 1, 0,1); ArrowLine = 1;}
         if (ShowLines > 2)  {UI_PrintStringSmall(line2,  1, 1, 1,1); ArrowLine = 2;}
-        if (ShowLines == 4)  {UI_PrintStringSmall(line3b,1, 1, 2,0); ArrowLine = 3;}
+        if (ShowLines == 4)  {UI_PrintStringSmall(line3b,1, 1, 2,0); ArrowLine = 2;}
         if (ShowLines == 5)  {UI_PrintStringSmall(line3, 1, 1, 2,1); ArrowLine = 3;}
     } else {
         DrawMeter(6);
