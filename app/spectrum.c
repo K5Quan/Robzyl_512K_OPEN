@@ -8,7 +8,7 @@
 #include "action.h"
 #include "bands.h"
 #include "ui/main.h"
-//#include "debugging.h"
+#include "debugging.h"
 
 /*	
           /////////////////////////DEBUG//////////////////////////
@@ -79,6 +79,7 @@ bool gCounthistory = 1;               // case 11
 ////////////////////////////////////////////////////////////////////
 uint32_t spectrumElapsedCount = 0;
 uint8_t IndexMaxLT = 0;
+static const char *labels[] = {"OFF","10s","30s", "1m", "5m", "10m", "20m", "30m"};
 #define LISTEN_STEP_COUNT 7
 const uint16_t listenSteps[] = {0, 10, 30, 60, 300, 600, 1200, 1800}; //in s
 static uint32_t lastReceivingFreq = 0;
@@ -1340,90 +1341,81 @@ static void DrawF(uint32_t f) {
     isKnownChannel = (channelFd != 0xFFFF);
     
     char line1[19] = "";
+    char line1b[19] = "";
     char line2[19] = "";
     char line3[32] = "";
+    char line3b[32] = "";
     
-    if (ShowLines > 0 || !classic)
-    strncpy(line1, freqStr, sizeof(line1)-1);
+    sprintf(line1, "%s", freqStr);
+    sprintf(line1b, "%s %s",freqStr, StringCode);
     
-    if (ShowLines > 1 || !classic){
-      if (StringCode[0]) {
-          strncat(line1, " ", sizeof(line1)-strlen(line1)-1);
-          strncat(line1, StringCode, sizeof(line1)-strlen(line1)-1);
-      }
-    }
     int len = 0;
     int pos = 0;
     char prefix[9] = "";
-    if (ShowLines > 2 || !classic){
-        if (appMode == SCAN_BAND_MODE) {
-            snprintf(prefix, sizeof(prefix), "B%u ", bl + 1);
-        } else if (appMode == CHANNEL_MODE) {
-                if (gNextTimeslice_1s){
-                  ReadChannelName(channelFd,channelName);
-                  gNextTimeslice_1s = 0;
+    
+    if (appMode == SCAN_BAND_MODE) {
+        snprintf(prefix, sizeof(prefix), "B%u ", bl + 1);
+        snprintf(line2, sizeof(line2), "%-3s%s", prefix, BParams[bl].BandName);
+    } else if (appMode == CHANNEL_MODE) {
+            if (gNextTimeslice_1s){
+              ReadChannelName(channelFd,channelName);
+              gNextTimeslice_1s = 0;
+            }
+            if (enabledLists[0])
+                    snprintf(prefix, sizeof(prefix), "S%s ", enabledLists);
+                else
+                    snprintf(prefix, sizeof(prefix), "ALL ");
+                if (isKnownChannel && channelName[0] && isListening) {
+                    len = sprintf(line2,"%-3s%s ", prefix, channelName);
+                    pos += len;
+                } else {
+                    len = sprintf(line2, "%s ", prefix);
+                    //pos += len;
                 }
-                if (enabledLists[0])
-                        snprintf(prefix, sizeof(prefix), "S%s ", enabledLists);
-                    else
-                        snprintf(prefix, sizeof(prefix), "ALL ");
-                    if (isKnownChannel && channelName[0] && isListening) {
-                        len = sprintf(line2,"%-3s%s ", prefix, channelName);
-                        pos += len;
-                    } else {
-                        len = sprintf(line2, "%s ", prefix);
-                        pos += len;
-                    }
-                }
-        if (appMode == SCAN_BAND_MODE) {
-            snprintf(line2, sizeof(line2), "%-3s%s", prefix, BParams[bl].BandName);
-        }
+            }
+    
+     pos = 0;
 
         if (WaitSpectrum > 0 && WaitSpectrum <61000) {
-              len = sprintf(&line2[pos],"E%d ", WaitSpectrum/1000);
+              len = sprintf(&line3b[pos],"End %d ", WaitSpectrum/1000);
               pos += len;
-            }
-          else if(WaitSpectrum > 61000) {
-            len = sprintf(&line2[pos],"OO "); //locked
+        } else if (WaitSpectrum > 61000){
+            len = sprintf(&line3b[pos],"End OO "); //locked
             pos += len;
-          }
-          if (isListening) {
-              if (MaxListenTime){
-                len = sprintf(&line2[pos],"M%d ", spectrumElapsedCount/1000);
-                pos += len;
-              }
-              else {
-                len = sprintf(&line2[pos],"R%d ", spectrumElapsedCount/1000); //elapsed receive time
-                pos += len;
-              }
         }
-    } 
-
-    if (ShowLines > 3 || !classic) {
-        if (f > 0 && historyListIndex <HISTORY_SIZE) {
-          formatHistory(line3, historyListIndex, channelFd, f);
-        }
-        else {
-            snprintf(line3, sizeof(line3), "0:EMPTY(0)");
-          }
+        if (isListening){
+            if (MaxListenTime){
+                  len = sprintf(&line3b[pos],"Max %d / %s", spectrumElapsedCount/1000, labels[IndexMaxLT]);
+                  pos += len;
+            } else {
+                  len = sprintf(&line3b[pos],"Rx %d ", spectrumElapsedCount/1000); //elapsed receive time
+            }
+      }
+    
+    if (f > 0 && historyListIndex <HISTORY_SIZE) {
+      formatHistory(line3, historyListIndex, channelFd, f);
     }
-
+    else {
+        snprintf(line3, sizeof(line3), "0:EMPTY(0)");
+      }
+    
     // ------------------------------------------------------------
     // AFFICHAGE
     // ------------------------------------------------------------
     if (classic) {
         if (ShowLines == 0) ArrowLine = 0; //Draw nothing
-        if (ShowLines == 1) {UI_DisplayFrequency(line1, 0, 0, 0);   ArrowLine = 2;}
-        if (ShowLines > 1)  {UI_PrintStringSmall(line1, 1, 1, 0,1); ArrowLine = 1;}
-        if (ShowLines > 2)  {UI_PrintStringSmall(line2, 1, 1, 1,1); ArrowLine = 2; }
-        if (ShowLines > 3)  {UI_PrintStringSmall(line3, 1, 1, 2,1); ArrowLine = 3; }
+        if (ShowLines == 1) {UI_DisplayFrequency(line1,  0, 0, 0);   ArrowLine = 2;}
+        if (ShowLines > 1)  {UI_PrintStringSmall(line1b, 1, 1, 0,1); ArrowLine = 1;}
+        if (ShowLines > 2)  {UI_PrintStringSmall(line2,  1, 1, 1,1); ArrowLine = 2;}
+        if (ShowLines == 4)  {UI_PrintStringSmall(line3b,1, 1, 2,0); ArrowLine = 3;}
+        if (ShowLines == 5)  {UI_PrintStringSmall(line3, 1, 1, 2,1); ArrowLine = 3;}
     } else {
         DrawMeter(6);
-        if (StringCode[0]) {UI_PrintStringSmall(line1, 1, 1, 0,1);}
+        if (StringCode[0]) {UI_PrintStringSmall(line1b, 1, 1, 0,1);}
         else UI_DisplayFrequency(line1, 0, 0, 0);
         UI_PrintString(line2, 1, 1, 2, 8);
-        UI_PrintString(line3, 1, 1, 4, 8);
-    }
+        UI_PrintString(line3b, 1, 1, 4, 8);
+      }
 }
 
 void LookupChannelInfo() {
@@ -1934,7 +1926,7 @@ static void OnKeyDown(uint8_t key) {
           indexFs = 0;
       } else {
           ShowLines++; 
-          if (ShowLines > 4) ShowLines = 0;
+          if (ShowLines > 5) ShowLines = 0;
       }
     break;
 
@@ -1959,7 +1951,7 @@ static void OnKeyDown(uint8_t key) {
             break;
         }
         else if(appMode==FREQUENCY_MODE) {UpdateCurrentFreq(true);}
-        else if (ShowLines > 3) {historyListIndex = (historyListIndex >0 ? historyListIndex-1 : 0);}
+        else if (ShowLines > 4) {historyListIndex = (historyListIndex >0 ? historyListIndex-1 : 0);}
         else if(appMode==CHANNEL_MODE){
               BuildValidScanListIndices();
               static bool isFirst = true;
@@ -1993,7 +1985,7 @@ static void OnKeyDown(uint8_t key) {
             break;
         }
         else if(appMode==FREQUENCY_MODE){UpdateCurrentFreq(false);}
-        else if (ShowLines > 3) {if (historyListIndex < HISTORY_SIZE) historyListIndex++;}
+        else if (ShowLines > 4) {if (historyListIndex < HISTORY_SIZE) historyListIndex++;}
         else if(appMode==CHANNEL_MODE){
             BuildValidScanListIndices();
             static bool isFirst = true;
@@ -2852,6 +2844,7 @@ static void GetFilteredScanListText(uint8_t displayIndex, char* buffer) {
     uint8_t realIndex = validScanListIndices[displayIndex];
     GetScanListLabel(realIndex, buffer);
 }
+
 static void GetParametersText(uint8_t index, char *buffer) {
     switch(index) {
         case 0:
@@ -2863,7 +2856,6 @@ static void GetParametersText(uint8_t index, char *buffer) {
               else sprintf(buffer, "SpectrumDelay:oo");
             break;
         case 2:
-            static const char *labels[] = {"OFF","10s","30s", "1m", "5m", "10m", "20m", "30m"};
             sprintf(buffer, "MaxListenTime:%s", labels[IndexMaxLT]);
             break;
 
