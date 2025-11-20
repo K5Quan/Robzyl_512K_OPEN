@@ -87,9 +87,9 @@ const uint16_t listenSteps[] = {0, 10, 30, 60, 300, 600, 1200, 1800}; //in s
 #define LISTEN_STEP_COUNT 7
 
 uint8_t IndexPS = 0;
-static const char *labelsPS[] = {"OFF","100ms","500ms", "1s", "5s", "10s", "20s", "30s"};
-const uint16_t PS_Steps[] = {0, 10, 50, 100, 500, 1000, 2000, 3000}; //in 10 ms
-#define PS_STEP_COUNT 7
+static const char *labelsPS[] = {"OFF","50ms","100ms","500ms", "1s", "5s", "10s", "20s", "30s"};
+const uint16_t PS_Steps[] = {0, 5, 10, 50, 100, 500, 1000, 2000, 3000}; //in 10 ms
+#define PS_STEP_COUNT 8
 
 
 static uint32_t lastReceivingFreq = 0;
@@ -947,22 +947,22 @@ LogUart(str); */
 /////////////////////////DEBUG//////////////////////////  
 }
 
-
+uint16_t PrevMax = 500;
+uint16_t PrevMin = 500;
+#define z 2
 static void UpdateDBMaxAuto() {
-  static uint8_t z = 3;
-  int newDbMax;
-    if (scanInfo.rssiMax > 0) {
-        newDbMax = Rssi2DBm(scanInfo.rssiMax);
-
-        if (newDbMax > settings.dbMax) {
-            settings.dbMax = settings.dbMax;
-        } else if (newDbMax < settings.dbMax -z) {
-            settings.dbMax = settings.dbMax - z;   // descente limitée
-        } 
-    }
-
-    if (scanInfo.rssiMin > 0) {settings.dbMin = Rssi2DBm(scanInfo.rssiMin);}
+    if (isListening) return;
+    if (scanInfo.rssiMax < PrevMax - z) {PrevMax -= z;}
+    else if (scanInfo.rssiMax > PrevMax) {PrevMax = scanInfo.rssiMax;}
+    settings.dbMax = Rssi2DBm(PrevMax);
+    if (scanInfo.rssiMin > PrevMin + z) {PrevMin += z;}
+    else if (scanInfo.rssiMin < PrevMin) {PrevMin = scanInfo.rssiMin;}
+    settings.dbMax = Rssi2DBm(PrevMax);
+    settings.dbMin = Rssi2DBm(PrevMin);
+    scanInfo.rssiMax = 0;
+    scanInfo.rssiMin = 0xFFFF;
 }
+
 
 
 
@@ -2436,11 +2436,12 @@ static void UpdateScan() {
     return;
   }
   newScanStart = true; //Scan end
-
-  BK4819_Sleep();
-	BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
-  SPECTRUM_PAUSED = true;
-  SpectrumPauseCount = SpectrumSleepMs;
+  if (SpectrumSleepMs) {
+      BK4819_Sleep();
+	    BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
+      SPECTRUM_PAUSED = true;
+      SpectrumPauseCount = SpectrumSleepMs;
+  }
 
 }
 
@@ -2546,7 +2547,7 @@ static void Tick() {
       // fin de la pause
       SPECTRUM_PAUSED = false;
       BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
-      BK4819_RX_TurnOn();
+      BK4819_RX_TurnOn(); //Wake up
       SYSTEM_DelayMs(10);
   }
 
