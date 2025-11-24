@@ -56,6 +56,7 @@ static volatile uint8_t gRequestedSpectrumState = 0;
 uint32_t HFreqs[HISTORY_SIZE]= {0};
 uint8_t HCount[HISTORY_SIZE]= {0};
 bool HBlacklisted[HISTORY_SIZE]= {0};
+static bool gHistoryScan = false; // Indicateur de scan de l'historique
 
 /////////////////////////////Parameters://///////////////////////////
 //SEE parametersSelectedIndex
@@ -1626,11 +1627,21 @@ static void OnKeyDown(uint8_t key) {
     }
     
 	if (key == KEY_5 && currentState == SPECTRUM) {
-        SetState(PARAMETERS_SELECT );
-        parametersSelectedIndex = 0;
-        parametersScrollOffset = 0;
-        
-        return; // Key handled
+     
+    if (historyListActive) {
+          gHistoryScan = !gHistoryScan;
+          if (gHistoryScan) {
+              ShowOSDPopup("SCAN HISTORY ON");
+              gIsPeak = false; // Force le redémarrage si on était bloqué
+          } else {
+              ShowOSDPopup("SCAN HISTORY OFF");
+          }
+          return;     
+    }
+    SetState(PARAMETERS_SELECT );
+    parametersSelectedIndex = 0;
+    parametersScrollOffset = 0;
+    return; // Key handled
     }
     
     // If we're in band selection mode, use dedicated key logic
@@ -1984,11 +1995,7 @@ static void OnKeyDown(uint8_t key) {
     break;
 
       case KEY_1: //SKIP OR SAVE
-        if (historyListActive) {
-            SaveHistoryToFreeChannel();
-        } else {
-            Skip();
-        }
+        Skip();
       break;
      
      case KEY_7:
@@ -2003,14 +2010,12 @@ static void OnKeyDown(uint8_t key) {
         }
         break;
      
-     case KEY_2: //FREE
-      classic=!classic;
-    /* /////////////////////////DEBUG//////////////////////////
-    char str[200] = "";
-    for (uint8_t i = 0; i < HISTORY_SIZE; i++) {
-    sprintf(str,"%d %d \r\n",HFreqs[i],historyListIndex);
-    LogUart(str); }
-    /////////////////////////DEBUG//////////////////////////  */
+     case KEY_2:
+        if (historyListActive) {
+            SaveHistoryToFreeChannel();
+        } else {
+            classic=!classic;
+        }
       break;
 
     case KEY_8:
@@ -2186,6 +2191,7 @@ case KEY_6:
   case KEY_EXIT: //exit from history
   
     if (historyListActive == true) {
+      gHistoryScan = false;
       SetState(SPECTRUM);
       historyListActive = false;
       SpectrumMonitor = prevSpectrumMonitor;
@@ -2495,25 +2501,67 @@ if (kbd.counter == 2 || (kbd.counter > 22 && (kbd.counter % 20 == 0))) {
     }
 }
 
+static void NextHistoryScanStep() {
+    uint8_t count = CountValidHistoryItems();
+    if (count == 0) return;
+
+    uint8_t start = historyListIndex;
+    
+    // Boucle pour trouver le prochain élément non blacklisté
+    do {
+        historyListIndex++;
+        if (historyListIndex >= count) historyListIndex = 0;
+        
+        // Sécurité : si on a fait un tour complet (tout est blacklisté), on s'arrête
+        if (historyListIndex == start && HBlacklisted[historyListIndex]) return;
+        
+    } while (HBlacklisted[historyListIndex]);
+
+    // Mise à jour de l'affichage (scroll) pour suivre le curseur
+    if (historyListIndex < historyScrollOffset) {
+        historyScrollOffset = historyListIndex;
+    } else if (historyListIndex >= historyScrollOffset + 6) { // 6 = MAX_VISIBLE_LINES
+        historyScrollOffset = historyListIndex - 6 + 1;
+    }
+
+    // Mise à jour de la fréquence pour le prochain cycle de mesure
+    scanInfo.f = HFreqs[historyListIndex];
+    
+    // Reset du compteur de temps pour la logique de pause
+    spectrumElapsedCount = 0;
+}
+
+
 static void UpdateScan() {
   if(SPECTRUM_PAUSED || gIsPeak || SpectrumMonitor || WaitSpectrum) return;
 
   SetF(scanInfo.f);
   Measure();
+  
+  // Si un signal est trouvé (gIsPeak), la fonction s'arrête ici grâce au return ci-dessus
+  // au prochain passage (via UpdateListening).
   if(gIsPeak || SpectrumMonitor || WaitSpectrum) return;
-  //UpdateScanInfo();
+
+  // --- MODIFICATION ICI ---
+  if (gHistoryScan && historyListActive) {
+      NextHistoryScanStep();
+      return;
+  }
+  // ------------------------
+
   if (scanInfo.i < GetStepsCount()) {
     NextScanStep();
     return;
   }
-  newScanStart = true; //Scan end
+  
+  // Fin du scan normal
+  newScanStart = true; 
   if (SpectrumSleepMs) {
       BK4819_Sleep();
-	    BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
+      BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
       SPECTRUM_PAUSED = true;
       SpectrumPauseCount = SpectrumSleepMs;
   }
-
 }
 
 
@@ -2920,15 +2968,15 @@ static void ClearSettings()
     settings.scanListEnabled[i] = 0;
     SLRssiTriggerLevelUp[i] = 5;
   }
-  settings.scanListEnabled[1] = 1;
+  settings.scanListEnabled[0] = 1;
   settings.rssiTriggerLevelUp = 5;
   settings.listenBw = 1;
   gScanRangeStart = 1400000;
   gScanRangeStop = 13000000;
-  DelayRssi = 2;
+  DelayRssi = 3;
   PttEmission = 2;
   settings.scanStepIndex = S_STEP_500kHz;
-  ShowLines = 2;
+  ShowLines = 3;
   SpectrumDelay = 0;
   MaxListenTime = 0;
   IndexMaxLT = 0;
