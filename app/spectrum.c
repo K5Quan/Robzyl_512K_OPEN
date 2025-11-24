@@ -30,8 +30,7 @@ static inline uint32_t get_sp(void)
     return sp;
 }
 
-/* Przybliżona ilość wolnej pamięci bajtach między heap_start a SP.
-    */
+
 static uint32_t free_ram_bytes(void)
 {
     uint32_t sp = get_sp();
@@ -78,6 +77,7 @@ bool gCounthistory = 1;               // case 11
 uint16_t SpectrumSleepMs = 0;         // case 14
 #define PARAMETER_COUNT 15
 ////////////////////////////////////////////////////////////////////
+
 uint32_t spectrumElapsedCount = 0;
 uint32_t SpectrumPauseCount = 0;
 bool SPECTRUM_PAUSED;
@@ -1950,6 +1950,7 @@ static void OnKeyDown(uint8_t key) {
           historyListIndex = 0;
           historyScrollOffset = 0;
           indexFs = 0;
+          SpectrumMonitor = 0;
       } else {
           ShowLines++; 
           if (ShowLines > 5) ShowLines = 0;
@@ -2679,6 +2680,18 @@ void LoadValidMemoryChannels(void)
       }
   }
 
+
+#include "index.h"
+
+bool IsVersionMatching(void) {
+    uint8_t stored,app_version;
+    app_version = APP_VERSION;
+    EEPROM_ReadBuffer(0x1D08, &stored, 1);
+    if (stored != APP_VERSION) EEPROM_WriteBuffer(0x1D08, &app_version);
+    return (stored == APP_VERSION);
+}
+
+
 typedef struct {
     // Block 1 (0x1D10 - 0x1D1F) 240 bytes max
     int ShowLines;
@@ -2710,6 +2723,8 @@ typedef struct {
 
 static void LoadSettings()
 {
+  if(!IsVersionMatching()) ClearSettings();
+
   SettingsEEPROM  eepromData  = {0};
   
   // Lecture de toutes les données
@@ -2864,6 +2879,7 @@ static void ClearSettings()
   BK4819_WriteRegister(BK4819_REG_2B, 49152);
   ClearHistory();
   //SaveSettings(); 
+  ShowOSDPopup("Default Settings");
 }
 
 

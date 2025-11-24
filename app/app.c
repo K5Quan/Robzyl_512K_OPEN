@@ -179,6 +179,7 @@ static void CheckForIncoming(void)
 	if (gCurrentFunction != FUNCTION_INCOMING)
 	{
 		FUNCTION_Select(FUNCTION_INCOMING);
+		BK4819_InitAGC(gTxVfo->Modulation); //Test Kolyan
 		//gUpdateDisplay = true;
 
 		UpdateRSSI();
