@@ -561,11 +561,78 @@ void ReadChannelName(uint16_t Channel, char *name) {
 }
 
 
+#include "settings.h" // Assurez-vous que ce fichier est inclus pour SETTINGS_SaveChannel
+
+static void SaveHistoryToFreeChannel(void) {
+    if (!historyListActive) return;
+
+    uint32_t f = HFreqs[historyListIndex];
+    if (f < 1000000) return; // Sécurité fréquence invalide
+
+    char str[32];
+
+    // --- ÉTAPE 1 : VÉRIFIER SI LA FRÉQUENCE EXISTE DÉJÀ ---
+    for (int i = 0; i < 200; i++) {
+        uint32_t freqInMem;
+        // Lecture des 4 premiers octets du canal (la fréquence)
+        EEPROM_ReadBuffer(ADRESS_FREQ_PARAMS + (i * 16), (uint8_t *)&freqInMem, 4);
+        
+        // Si le canal n'est pas vide (0xFFFFFFFF) et que la fréquence correspond
+        if (freqInMem != 0xFFFFFFFF && freqInMem == f) {
+            sprintf(str, "Exist CH %d", i + 1);
+            ShowOSDPopup(str);
+            return; // On arrête ici, pas de sauvegarde
+        }
+    }
+
+    // --- ÉTAPE 2 : CHERCHER UN EMPLACEMENT LIBRE ---
+    int freeCh = -1;
+    for (int i = 0; i < 200; i++) {
+        uint8_t checkByte;
+        // On vérifie juste le premier octet pour voir si le slot est libre
+        EEPROM_ReadBuffer(ADRESS_FREQ_PARAMS + (i * 16), &checkByte, 1);
+        if (checkByte == 0xFF) { 
+            freeCh = i;
+            break;
+        }
+    }
+
+    // --- ÉTAPE 3 : SAUVEGARDER ---
+    if (freeCh != -1) {
+        VFO_Info_t tempVFO;
+        memset(&tempVFO, 0, sizeof(tempVFO)); 
+
+        // Remplissage des paramètres
+        tempVFO.freq_config_RX.Frequency = f;
+        tempVFO.freq_config_TX.Frequency = f; 
+        tempVFO.TX_OFFSET_FREQUENCY = 0;
+        
+        tempVFO.Modulation = settings.modulationType;
+        tempVFO.CHANNEL_BANDWIDTH = settings.listenBw; 
+
+        tempVFO.OUTPUT_POWER = OUTPUT_POWER_LOW;
+        tempVFO.STEP_SETTING = STEP_12_5kHz; 
+        tempVFO.BUSY_CHANNEL_LOCK = 0;
+        
+        // Sauvegarde propre via la fonction système
+        SETTINGS_SaveChannel(freeCh, &tempVFO, 2);
+
+        // Rafraichir les listes
+        LoadValidMemoryChannels();
+
+        sprintf(str, "Saved to CH %d", freeCh + 1);
+        ShowOSDPopup(str);
+    } else {
+        ShowOSDPopup("Memory Full");
+    }
+}
+
 typedef struct HistoryStruct {
     uint32_t HFreqs;
     uint8_t HCount;
     uint8_t HBlacklisted;
 } HistoryStruct;
+
 
 #ifdef ENABLE_EEPROM_512K
 static bool historyLoaded = false; // flaga stanu wczytania histotii spectrum
@@ -1916,8 +1983,12 @@ static void OnKeyDown(uint8_t key) {
     ShowOSDPopup(modText);
     break;
 
-      case KEY_1: //SKIP
-        Skip();
+      case KEY_1: //SKIP OR SAVE
+        if (historyListActive) {
+            SaveHistoryToFreeChannel();
+        } else {
+            Skip();
+        }
       break;
      
      case KEY_7:
