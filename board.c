@@ -676,6 +676,14 @@ uint16_t BOARD_gMR_fetchChannel(const uint32_t freq)
 		return 0xFFFF;
 	}
 
+static const uint32_t gDefaultFrequencyTable[] =
+{
+	14500000,    //
+	14550000,    //
+	43300000,    //
+	43320000,    //
+	43350000     //
+};
 
 void BOARD_FactoryReset()
 {
@@ -688,4 +696,16 @@ void BOARD_FactoryReset()
 	for (i = ADRESS_FREQ_PARAMS; i < ADRESS_HISTORY; i += 8) EEPROM_WriteBuffer(i, Template);
 #endif
 
+		RADIO_InitInfo(gTxVfo, FREQ_CHANNEL_FIRST + BAND6_400MHz, 44600625);
+		gEeprom.RX_OFFSET = 0;
+		SETTINGS_SaveSettings();
+		// set the first few memory channels
+		for (i = 0; i < ARRAY_SIZE(gDefaultFrequencyTable); i++)
+		{
+			const uint32_t Frequency   = gDefaultFrequencyTable[i];
+			gTxVfo->freq_config_RX.Frequency = Frequency;
+			gTxVfo->freq_config_TX.Frequency = Frequency;
+			gTxVfo->Band               = FREQUENCY_GetBand(Frequency);
+			SETTINGS_SaveChannel(FREQ_CHANNEL_FIRST + i, 0, 2);
+		}
 }

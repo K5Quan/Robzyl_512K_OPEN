@@ -33,7 +33,7 @@
 #include "ui/inputbox.h"
 #include "ui/main.h"
 #include "ui/ui.h"
-#include "debugging.h"
+//#include "debugging.h"
 
 center_line_t center_line = CENTER_LINE_NONE;
 
@@ -168,6 +168,7 @@ void UI_DisplayMain(void)
 	const unsigned int line       = line0 ;
 	uint8_t           *p_line    = gFrameBuffer[line + 5];
 	unsigned int       mode       = 0;
+	uint32_t frequency;
 
 		if (IS_MR_CHANNEL(gEeprom.ScreenChannel))
 		{	// Channel mode
@@ -180,8 +181,8 @@ void UI_DisplayMain(void)
 		}
 		
 		unsigned int state = VfoState;
-		//uint32_t frequency = gEeprom.VfoInfo.pRX->Frequency;
-		uint32_t frequency = BOARD_fetchChannelFrequency(gEeprom.ScreenChannel);
+		frequency = gEeprom.VfoInfo.pRX->Frequency;
+		
 
 		if (state != VFO_STATE_NORMAL)
 		{
@@ -205,7 +206,7 @@ void UI_DisplayMain(void)
 				if (gCurrentFunction == FUNCTION_TRANSMIT)
 				{	// transmitting
 				frequency = gEeprom.VfoInfo.pTX->Frequency;
-				}
+				} else frequency = BOARD_fetchChannelFrequency(gEeprom.ScreenChannel);
 				// Always show frequency
 				sprintf(String, "%3u.%05u", frequency / 100000, frequency % 100000);   //temp
 				// show the remaining 2 small frequency digits
@@ -214,8 +215,6 @@ void UI_DisplayMain(void)
 				// show the main large frequency digits
 				UI_DisplayFrequency(String, 0, line+4, false);
 
-
-char str[64] = "";sprintf(str, "%s %d\r\n", String,frequency);LogUart(str);
 
 				if (IS_MR_CHANNEL(gEeprom.ScreenChannel) && state == VFO_STATE_NORMAL)
 				{	// it's a Channel
