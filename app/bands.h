@@ -5,6 +5,8 @@
 static const bandparameters BParams[32] = {
     // BandName       Startfrequency    Stopfrequency   scanStep          modulationType
     {"AIR 8.33k",     11800000,         13700000,       S_STEP_8_33kHz,   MODULATION_AM},
+    {"HAM 144M",      14400000,         14600000,       S_STEP_12_5kHz,   MODULATION_FM},
+    {"HAM 430M",      43000000,         44000000,       S_STEP_10_0kHz,   MODULATION_FM},
     {"AIR MIL1",      13800000,         14400000,       S_STEP_25_0kHz,   MODULATION_AM},
     {"AIR MIL2",      22500000,         24107500,       S_STEP_25_0kHz,   MODULATION_AM},
     {"AIR MIL3",      33540000,         33970000,       S_STEP_25_0kHz,   MODULATION_AM},
@@ -28,9 +30,7 @@ static const bandparameters BParams[32] = {
     {"HAM 28MHz",      2800000,          2970000,       S_STEP_1_0kHz,    MODULATION_AM},
     {"HAM 50MHz",      5000000,          5200000,       S_STEP_10_0kHz,   MODULATION_FM},
     {"70 Mhz",         7000000,          7050000,       S_STEP_12_5kHz,   MODULATION_FM},
-    {"HAM 144M",      14400000,         14600000,       S_STEP_12_5kHz,   MODULATION_FM},
     {"220Mhz",        22000000,         22500000,       S_STEP_10_0kHz,   MODULATION_FM},
-    {"HAM 430M",      43000000,         44000000,       S_STEP_10_0kHz,   MODULATION_FM},
     {"1240MHz",      124000000,        130000000,       S_STEP_25_0kHz,   MODULATION_FM},
     {"SATCOM",        24000000,         27500000,       S_STEP_10_0kHz,   MODULATION_FM},
     {"AIR 25k",       11800000,         13700000,       S_STEP_25_0kHz,   MODULATION_AM},

@@ -76,7 +76,10 @@ bool gCounthistory = 1;               // case 11
 //ClearHistory                        // case 12      
 //RAM                                 // case 13     
 uint16_t SpectrumSleepMs = 0;         // case 14
-#define PARAMETER_COUNT 15
+uint8_t Noislvl_OFF = 60;             // case 15
+uint8_t Noislvl_ON = 50;              // case 16
+
+#define PARAMETER_COUNT 17
 ////////////////////////////////////////////////////////////////////
 
 uint32_t spectrumElapsedCount = 0;
@@ -790,24 +793,12 @@ uint8_t GetBWRegValueForScan() {
 }
 
 uint16_t GetRssi(void) {
-    uint16_t rssi,test=0;
-    
-    while (test == 0){
-        if (isListening) {
-            while ((BK4819_ReadRegister(0x63) & 0xFF) >= 255) {
-                SYSTICK_DelayUs(500);
-            }
-        } else {
-            BK4819_ReadRegister(0x63);
-            SYSTICK_DelayUs(DelayRssi * 1000);
-        }
-        test = BK4819_GetRSSI();
-        if(test) rssi = test;
-  }
-    
-    if ((appMode == CHANNEL_MODE) && (FREQUENCY_GetBand(scanInfo.f) > BAND4_174MHz)) {
-        rssi += UHF_NOISE_FLOOR;
-      }
+    uint16_t rssi;
+    BK4819_ReadRegister(0x63);
+    if (isListening) SYSTICK_DelayUs(12000); 
+    else SYSTICK_DelayUs(DelayRssi * 1000);
+    rssi = BK4819_GetRSSI();
+    if (FREQUENCY_GetBand(scanInfo.f) > BAND4_174MHz) {rssi += UHF_NOISE_FLOOR;}
   return rssi;
 }
 
@@ -967,14 +958,11 @@ static void RelaunchScan() {
 }
 
 void UpdateNoiseOff(){
-	const uint16_t NOISLVL = 69; //65-72
-  if( BK4819_GetExNoiseIndicator() > NOISLVL) {gIsPeak = false;ToggleRX(false);}		
+  if( BK4819_GetExNoiseIndicator() > Noislvl_OFF) {gIsPeak = false;ToggleRX(false);}		
 }
 
 void UpdateNoiseOn(){
-	const uint16_t NOISLVL = 60; //65-72
-	if( BK4819_GetExNoiseIndicator() < NOISLVL) {gIsPeak = true;ToggleRX(true);}
-
+	if( BK4819_GetExNoiseIndicator() < Noislvl_ON) {gIsPeak = true;ToggleRX(true);}
 }
 
 static void UpdateScanInfo() {
@@ -1004,13 +992,13 @@ static void Measure() {
     }
 
     if (!gIsPeak && rssi > previousRssi + settings.rssiTriggerLevelUp) {
-        SYSTEM_DelayMs(5);
+        SYSTEM_DelayMs(10);
         uint16_t rssi2 = scanInfo.rssi = GetRssi();
         if (rssi2 > rssi+10) {
           peak.f = scanInfo.f;
           peak.i = scanInfo.i;
-          if (settings.rssiTriggerLevelUp < 50) gIsPeak = true;
         }
+        if (settings.rssiTriggerLevelUp < 50) gIsPeak = true;
     } 
     if (!gIsPeak || !isListening)
         previousRssi = rssi;
@@ -1953,6 +1941,16 @@ static void OnKeyDown(uint8_t key) {
                         }
                         SpectrumSleepMs = PS_Steps[IndexPS];
                       break;
+                  case 15: // Noislvl_OFF
+                      Noislvl_OFF = isKey3 ? 
+                                 (Noislvl_OFF >= 100 ? 0 : Noislvl_OFF + 1) :
+                                 (Noislvl_OFF <= 0 ? 100 : Noislvl_OFF - 1);
+                      break;
+                  case 16: // Noislvl_ON
+                      Noislvl_ON = isKey3 ? 
+                                 (Noislvl_ON >= 100 ? 0 : Noislvl_ON + 1) :
+                                 (Noislvl_ON <= 0 ? 100 : Noislvl_ON - 1);
+                      break;
               }
             
 
@@ -2154,14 +2152,14 @@ static void OnKeyDown(uint8_t key) {
     break;
   
 /* next mode poprawione */
-case KEY_6:
+  case KEY_6:
     Spectrum_state++;
     if (Spectrum_state > 4) Spectrum_state = 0;
     gRequestedSpectrumState = Spectrum_state;
     gSpectrumChangeRequested = true;
     isInitialized = false;
     spectrumElapsedCount = 0;
-    break;
+  break;
   
     case KEY_SIDE1:
         if (SPECTRUM_PAUSED) return;
@@ -2871,6 +2869,8 @@ typedef struct {
     uint16_t SpectrumDelay;
     uint8_t IndexMaxLT;
     uint8_t IndexPS;
+    uint8_t Noislvl_OFF;
+    uint8_t Noislvl_ON; 
     bool Backlight_On_Rx;
 } SettingsEEPROM;
 
@@ -2910,7 +2910,8 @@ static void LoadSettings()
   
   IndexPS = eepromData.IndexPS;
   SpectrumSleepMs = PS_Steps[IndexPS];
-
+  Noislvl_OFF = eepromData.Noislvl_OFF;
+  Noislvl_ON  = eepromData.Noislvl_ON; 
   Backlight_On_Rx = eepromData.Backlight_On_Rx;
   ChannelAttributes_t att;
   for (int i = 0; i < MR_CHANNEL_LAST+1; i++) {
@@ -2952,6 +2953,9 @@ static void SaveSettings()
   eepromData.IndexMaxLT = IndexMaxLT;
   eepromData.IndexPS = IndexPS;
   eepromData.Backlight_On_Rx = Backlight_On_Rx;
+  eepromData.Noislvl_OFF = Noislvl_OFF;
+  eepromData.Noislvl_ON  = Noislvl_ON ;
+  
   for (int i = 0; i < 32; i++) { 
       eepromData.BPRssiTriggerLevelUp[i] = BPRssiTriggerLevelUp[i];
       if (settings.bandEnabled[i]) eepromData.bandListFlags |= (1 << i);
@@ -3017,11 +3021,13 @@ static void ClearSettings()
   IndexMaxLT = 0;
   IndexPS = 0;
   Backlight_On_Rx = 0;
+  Noislvl_OFF = 60; 
+  Noislvl_ON = 50;  
   for (int i = 0; i < 32; i++) { 
       BPRssiTriggerLevelUp[i] = 5;
       settings.bandEnabled[i] = 0;
     }
-  settings.bandEnabled[1] = 1;
+  settings.bandEnabled[0] = 1;
   
   BK4819_WriteRegister(BK4819_REG_40, 13520);
   BK4819_WriteRegister(BK4819_REG_29, 43840);
@@ -3161,6 +3167,12 @@ static void GetParametersText(uint8_t index, char *buffer) {
 
         case 14:
             sprintf(buffer, "PowerSave: %s", labelsPS[IndexPS]);
+            break;
+        case 15:
+            sprintf(buffer, "Noislvl_OFF: %d", Noislvl_OFF);
+            break;
+        case 16:
+            sprintf(buffer, "Noislvl_ON: %d", Noislvl_ON);
             break;
 
         default:
