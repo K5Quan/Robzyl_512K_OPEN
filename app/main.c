@@ -121,15 +121,22 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 
 		case KEY_6:
 			if (beep) APP_RunSpectrum(2); // Band scan
-			else ACTION_Power();
+			else {
+			gTxVfo->FrequencyReverse = gTxVfo->FrequencyReverse == false;
+			gRequestSaveChannel = 1;
+			}
 			break;
 		
 		case KEY_7:
+			ACTION_SwitchDemodul();
 			break;
 
 		case KEY_8:
-			gTxVfo->FrequencyReverse = gTxVfo->FrequencyReverse == false;
-			gRequestSaveChannel = 1;
+			ACTION_Power();
+			break;
+		case KEY_9:
+			gTxVfo->CHANNEL_BANDWIDTH =
+				ACTION_NextBandwidth(gTxVfo->CHANNEL_BANDWIDTH, gTxVfo->Modulation != MODULATION_AM, 0);
 			break;
 
 
