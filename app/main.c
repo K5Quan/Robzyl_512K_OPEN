@@ -102,11 +102,13 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 			gRequestSaveVFO            = true;
 			gVfoConfigureMode          = VFO_CONFIGURE_RELOAD;
 			gRequestDisplayScreen      = DISPLAY_MAIN;
-
+			break;
 
 		case KEY_2:
-		//Nothing
-
+			if (++gTxVfo->SCANLIST > 15) gTxVfo->SCANLIST = 0;
+			SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true);
+			gVfoConfigureMode = VFO_CONFIGURE;
+			gFlagResetVfos    = true;
 			break;
 
 		case KEY_3:

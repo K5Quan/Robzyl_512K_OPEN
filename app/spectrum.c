@@ -8,7 +8,7 @@
 #include "action.h"
 #include "bands.h"
 #include "ui/main.h"
-//#include "debugging.h"
+#include "debugging.h"
 
 /*	
           /////////////////////////DEBUG//////////////////////////
@@ -47,7 +47,7 @@ static uint32_t free_ram_bytes(void)
 }
 
 #define MAX_VISIBLE_LINES 6
-#define HISTORY_SIZE 100
+#define HISTORY_SIZE 30
 
 /*   */
 static volatile bool gSpectrumChangeRequested = false;
@@ -154,7 +154,6 @@ static void LoadSettings();
 static void SaveSettings();
 const uint16_t RSSI_MAX_VALUE = 255;
 static uint16_t R30, R37, R3D, R43, R47, R48, R7E, R02, R3F;
-static uint32_t initialFreq;
 static char String[100];
 static char StringC[10];
 bool isKnownChannel = false;
@@ -794,11 +793,12 @@ uint8_t GetBWRegValueForScan() {
 
 uint16_t GetRssi(void) {
     uint16_t rssi;
-    BK4819_ReadRegister(0x63);
+    //BK4819_ReadRegister(0x63);
     if (isListening) SYSTICK_DelayUs(12000); 
     else SYSTICK_DelayUs(DelayRssi * 1000);
     rssi = BK4819_GetRSSI();
     if (FREQUENCY_GetBand(scanInfo.f) > BAND4_174MHz) {rssi += UHF_NOISE_FLOOR;}
+    BK4819_ReadRegister(0x63);
   return rssi;
 }
 
@@ -816,36 +816,45 @@ static void ToggleAudio(bool on) {
 
 void FillfreqHistory(void)
 {
-    if (peak.f == 0)
-        return;
+    uint32_t f = peak.f;
+    if (f == 0) return;
 
-    // Vérifier si la fréquence existe déjà
-    for (uint8_t i = 0; i < indexFs; i++) {
-        if (HFreqs[i] == peak.f) {
+    for (uint8_t i = 0; i < HISTORY_SIZE; i++) {
+        if (HFreqs[i] == f) {
 
+            // Gestion du compteur
             if (gCounthistory) {
-                if (lastReceivingFreq != peak.f)
+                if (lastReceivingFreq != f)
                     HCount[i]++;
             } else {
                 HCount[i]++;
             }
 
-            lastReceivingFreq = peak.f;
+            lastReceivingFreq = f;
             historyListIndex = i;
             return;
         }
     }
+    uint8_t pos = 0;
+    while (pos < indexFs && HFreqs[pos] < f) {pos++;}
 
-    // Ajout nouvelle fréquence
-    HFreqs[indexFs] = peak.f;
-    HCount[indexFs] = 1;
-    HBlacklisted[indexFs] = 0;
-    historyListIndex = indexFs;
+    for (uint8_t i = indexFs; i > pos; i--) {
+        HFreqs[i]       = HFreqs[i - 1];
+        HCount[i]       = HCount[i - 1];
+        HBlacklisted[i] = HBlacklisted[i - 1];
+    }
 
-    indexFs++;
-    if (indexFs >= HISTORY_SIZE)
-        indexFs = 0; // buffer circulaire stable
-}
+    HFreqs[pos]       = f;
+    HCount[pos]       = 1;
+    HBlacklisted[pos] = 0;
+    lastReceivingFreq = f;
+    historyListIndex = pos;
+    if (indexFs < HISTORY_SIZE) indexFs++;
+    
+    if (indexFs >= HISTORY_SIZE) {indexFs = 0;}
+} 
+
+
 
 
 
@@ -1035,11 +1044,11 @@ LogUart(str); */
 /////////////////////////DEBUG//////////////////////////  
 }
 
-static void UpdateDBMaxAuto() {
+static void UpdateDBMaxAuto() { //Zoom
   static uint8_t z = 3;
   int newDbMax;
     if (scanInfo.rssiMax > 0) {
-        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -60, 10);
+        newDbMax = clamp(Rssi2DBm(scanInfo.rssiMax), -100, 0);
 
         if (newDbMax > settings.dbMax + z) {
             settings.dbMax = settings.dbMax + z;   // montée limitée
@@ -1051,7 +1060,7 @@ static void UpdateDBMaxAuto() {
     }
 
     if (scanInfo.rssiMin > 0) {
-        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -160, -80);
+        settings.dbMin = clamp(Rssi2DBm(scanInfo.rssiMin), -160, -110);
     }
 }
 
@@ -1476,7 +1485,8 @@ static void DrawF(uint32_t f) {
                     len = sprintf(prefix, "ALL ");
                     pos += len;
               }
-              if (isKnownChannel && channelName[0] && isListening) {
+              //if (isKnownChannel && channelName[0] && isListening) {
+              if (isKnownChannel && channelName[0]) {
                     len = sprintf(line2,"%-3s%s ", prefix, channelName);
                     pos += len;
                 } else {
@@ -1972,7 +1982,7 @@ static void OnKeyDown(uint8_t key) {
           RelaunchScan();
           ResetModifiers();
           if(Key_1_pressed) {
-            Key_1_pressed = 0;
+            //Key_1_pressed = 0;
             APP_RunSpectrum(3);
           }
           break;
@@ -2747,11 +2757,12 @@ void APP_RunSpectrum(uint8_t Spectrum_state)
         appMode = mode;
         ResetModifiers();
         if (appMode==CHANNEL_MODE) LoadValidMemoryChannels();
-        if (appMode==FREQUENCY_MODE) {
-            currentFreq = initialFreq = gTxVfo->pRX->Frequency;
+        if (appMode==FREQUENCY_MODE && !Key_1_pressed) {
+            currentFreq = gTxVfo->pRX->Frequency;
             gScanRangeStart = currentFreq - (GetBW() >> 1);
             gScanRangeStop  = currentFreq + (GetBW() >> 1);
         }
+        Key_1_pressed = 0;
         BackupRegisters();
         uint8_t CodeType = gTxVfo->pRX->CodeType;
         uint8_t Code     = gTxVfo->pRX->Code;
@@ -3043,7 +3054,6 @@ static void ClearSettings()
   BK4819_WriteRegister(BK4819_REG_3C, 20360);
   BK4819_WriteRegister(BK4819_REG_43, 13896);
   BK4819_WriteRegister(BK4819_REG_2B, 49152);
-  ClearHistory();
   //SaveSettings(); 
   ShowOSDPopup("Default Settings");
 }
@@ -3163,7 +3173,7 @@ static void GetParametersText(uint8_t index, char *buffer) {
             break;
 
         case 12:
-            sprintf(buffer, "CLEAR HISTORY: 3");
+            sprintf(buffer, "CLR HIST:1KBL 3ALL");
             break;
 
         case 13:
