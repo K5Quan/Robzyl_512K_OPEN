@@ -188,9 +188,9 @@ static const bandparameters BParams[32] = {
     {"18-24MHz",       1806800,          2499000,       S_STEP_1_0kHz,    MODULATION_SSB},
     {"CB (27MHz)",     2651500,          2830500,       S_STEP_5_0kHz,    MODULATION_SSB},
     {"10M (28MHz)",    2800000,          2970000,       S_STEP_1_0kHz,    MODULATION_AM},
-    {"LB (30-33MHz)",  3000000,          3300000,       S_STEP_10_0kHz,   MODULATION_FM},
-    {"LB (33-48MHz)",  3300000,          4850000,       S_STEP_10_0kHz,   MODULATION_FM},
-    {"LB (48-57MHz)",  4800000,          5750000,       S_STEP_10_0kHz,   MODULATION_FM},
+    {"LB 30-33MHz",    3000000,          3300000,       S_STEP_10_0kHz,   MODULATION_FM},
+    {"LB 33-48MHz",    3300000,          4850000,       S_STEP_10_0kHz,   MODULATION_FM},
+    {"LB 48-57MHz",    4800000,          5750000,       S_STEP_10_0kHz,   MODULATION_FM},
     {"70 Mhz",         7000000,          7050000,       S_STEP_12_5kHz,   MODULATION_FM},
     {"AIR",           11800000,         13790000,       S_STEP_2_5kHz,    MODULATION_AM},
     {"136-144MHz-",   13600000,         14400000,       S_STEP_25_0kHz,   MODULATION_FM},
@@ -199,12 +199,12 @@ static const bandparameters BParams[32] = {
     {"MARINE",        15550000,         16202500,       S_STEP_25_0kHz,   MODULATION_FM},
     {"VHF-H",         16200000,         17000000,       S_STEP_25_0kHz,   MODULATION_FM},
 	{"VHF-H1",        17000000,         17400000,       S_STEP_25_0kHz,   MODULATION_FM},
-    {"SATCOM-L",      24000000,         25000000,       S_STEP_5_0kHz,   MODULATION_FM}
-    {"SATCOM-H",      25050000,         29500000,       S_STEP_5_0kHz,   MODULATION_FM}
-    {"RIVER",         30001250,         30051250,       S_STEP_5_0kHz,   MODULATION_FM}
-    {"ARMY",          30051300,         33600000,       S_STEP_5_0kHz,   MODULATION_FM}
-    {"RIVER",         33601250,         34000050,       S_STEP_5_0kHz,   MODULATION_FM}
-    {"LTE",           36000000,         38000000,       S_STEP_5_0kHz,   MODULATION_FM}
+    {"SATCOM-L",      24000000,         25000000,       S_STEP_5_0kHz,    MODULATION_FM},
+    {"SATCOM-H",      25050000,         29500000,       S_STEP_5_0kHz,    MODULATION_FM},
+    {"RIVER",         30001250,         30051250,       S_STEP_5_0kHz,    MODULATION_FM},
+    {"ARMY",          30051300,         33600000,       S_STEP_5_0kHz,    MODULATION_FM},
+    {"RIVER",         33601250,         34000050,       S_STEP_5_0kHz,    MODULATION_FM},
+    {"LTE",           36000000,         38000000,       S_STEP_5_0kHz,    MODULATION_FM},
     {"UHF400",        40000000,         43300000,       S_STEP_25_0kHz,   MODULATION_FM},
     {"LPD 433",       43307500,         43480000,       S_STEP_25_0kHz,   MODULATION_FM},
     {"PMR 446",       44600625,         44619375,       S_STEP_12_5kHz,   MODULATION_FM},
@@ -212,7 +212,5 @@ static const bandparameters BParams[32] = {
     {"GOV 460MHz",    46000000,         46200000,       S_STEP_12_5kHz,   MODULATION_FM},
     {"LORA ",         86400000,         86900000,       S_STEP_12_5kHz,   MODULATION_FM},
     {"GSM",           89000000,         91500000,       S_STEP_12_5kHz,   MODULATION_FM},
-
-
 };
 #endif
