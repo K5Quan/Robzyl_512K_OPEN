@@ -86,9 +86,9 @@ uint32_t spectrumElapsedCount = 0;
 uint32_t SpectrumPauseCount = 0;
 bool SPECTRUM_PAUSED;
 uint8_t IndexMaxLT = 0;
-static const char *labels[] = {"OFF","10s","30s", "1m", "5m", "10m", "20m", "30m"};
-const uint16_t listenSteps[] = {0, 10, 30, 60, 300, 600, 1200, 1800}; //in s
-#define LISTEN_STEP_COUNT 7
+static const char *labels[] = {"OFF","2s","5s","10s","30s", "1m", "5m", "10m", "20m", "30m"};
+const uint16_t listenSteps[] = {0, 2, 5, 10, 30, 60, 300, 600, 1200, 1800}; //in s
+#define LISTEN_STEP_COUNT 9
 
 uint8_t IndexPS = 0;
 static const char *labelsPS[] = {"OFF","100ms","500ms", "1s", "2s", "5s"};
@@ -219,9 +219,11 @@ static uint8_t nextBandToScanIndex = 0;
   static void BuildScanListChannels(uint8_t scanListIndex);
   static void RenderScanListChannels();
   static void RenderScanListChannelsDoubleLines(const char* title, uint8_t numItems, uint8_t selectedIndex, uint8_t scrollOffset);
-  #define MAX_VALID_SCANLISTS 15
 #endif
+
+  #define MAX_VALID_SCANLISTS 15
   static uint8_t validScanListIndices[MAX_VALID_SCANLISTS]; // stocke les index valides
+
 
 const RegisterSpec allRegisterSpecs[] = {
     {"LNAs",  0x13, 8, 0b11,  1},
@@ -371,7 +373,6 @@ void ShowOSDPopup(const char *str)
 {
     strncpy(osdPopupText, str, sizeof(osdPopupText)-1);
     osdPopupText[sizeof(osdPopupText)-1] = '\0';  // Zabezpieczenie przed przepełnieniem
-    osdPopupTimer = 1500;
     UI_DisplayPopup(osdPopupText);
     ST7565_BlitFullScreen();
 }
@@ -601,6 +602,7 @@ static void DeleteHistoryItem(void) {
     }
     
     // Mettre à jour l'affichage
+    osdPopupTimer = 750;
     ShowOSDPopup("Deleted");
     gUpdateDisplay = true;
 }
@@ -625,6 +627,7 @@ static void SaveHistoryToFreeChannel(void) {
         // Si le canal n'est pas vide (0xFFFFFFFF) et que la fréquence correspond
         if (freqInMem != 0xFFFFFFFF && freqInMem == f) {
             sprintf(str, "Exist CH %d", i + 1);
+            osdPopupTimer = 1500;
             ShowOSDPopup(str);
             return; // On arrête ici, pas de sauvegarde
         }
@@ -643,6 +646,7 @@ static void SaveHistoryToFreeChannel(void) {
     }
 
     // --- ÉTAPE 3 : SAUVEGARDER ---
+    osdPopupTimer = 1500;
     if (freeCh != -1) {
         VFO_Info_t tempVFO;
         memset(&tempVFO, 0, sizeof(tempVFO)); 
@@ -700,6 +704,7 @@ void ReadHistory(void) {
         indexFs = position + 1;
       }
     }
+    osdPopupTimer = 1500;
     ShowOSDPopup("History Loaded");
 }
 
@@ -720,6 +725,7 @@ void WriteHistory(void) {
     History.HBlacklisted = 0xFF;
     EEPROM_WriteBuffer(ADRESS_HISTORY + indexFs * sizeof(HistoryStruct),
                        (uint8_t *)&History);
+    osdPopupTimer = 1500;
     ShowOSDPopup("History Saved");
 }
 
@@ -817,11 +823,10 @@ static void ToggleAudio(bool on) {
 void FillfreqHistory(void)
 {
     uint32_t f = peak.f;
-    if (f == 0) return;
+    if (f < 1400000 || f > 130000000) return;
 
     for (uint8_t i = 0; i < HISTORY_SIZE; i++) {
         if (HFreqs[i] == f) {
-
             // Gestion du compteur
             if (gCounthistory) {
                 if (lastReceivingFreq != f)
@@ -829,7 +834,6 @@ void FillfreqHistory(void)
             } else {
                 HCount[i]++;
             }
-
             lastReceivingFreq = f;
             historyListIndex = i;
             return;
@@ -853,10 +857,6 @@ void FillfreqHistory(void)
     
     if (indexFs >= HISTORY_SIZE) {indexFs = 0;}
 } 
-
-
-
-
 
 static void ToggleRX(bool on) {
     if (SPECTRUM_PAUSED) return;
@@ -1666,6 +1666,7 @@ static void OnKeyDown(uint8_t key) {
      
     if (historyListActive) {
           gHistoryScan = !gHistoryScan;
+          osdPopupTimer = 1000;
           if (gHistoryScan) {
               ShowOSDPopup("SCAN HISTORY ON");
               gIsPeak = false; // Force le redémarrage si on était bloqué
@@ -1779,37 +1780,34 @@ static void OnKeyDown(uint8_t key) {
                 SetState(SCANLIST_CHANNELS);
                 
                 break;	
-#endif // ENABLE_SCANLIST_SHOW_DETAIL
+
             case KEY_4: // Scan list selection
                 //ToggleScanList(scanListSelectedIndex, 0);
-				ToggleScanList(validScanListIndices[scanListSelectedIndex], 0);
-
+				        ToggleScanList(validScanListIndices[scanListSelectedIndex], 0);
                 if (scanListSelectedIndex < validScanListCount - 1) {
                       scanListSelectedIndex++;
                    }
-
-                
                 break;
+
             case KEY_5: // Scan list selection
                 ToggleScanList(validScanListIndices[scanListSelectedIndex], 1);
-                 
                 break;
-				
 				        
-        case KEY_MENU:
-            if (scanListSelectedIndex < 15) {
-                ToggleScanList(validScanListIndices[scanListSelectedIndex], 1);
-                SetState(SPECTRUM);
-                ResetModifiers();
-                RelaunchScan();
-            }
-            break;
+            case KEY_MENU:
+                if (scanListSelectedIndex < 15) {
+                    ToggleScanList(validScanListIndices[scanListSelectedIndex], 1);
+                    SetState(SPECTRUM);
+                    ResetModifiers();
+                    RelaunchScan();
+                }
+                break;
 				
         case KEY_EXIT: // Exit scan list selection
                 SetState(SPECTRUM); // Return to scanning mode
                 ResetModifiers();
                 RelaunchScan(); 
                 break;
+#endif // ENABLE_SCANLIST_SHOW_DETAIL
         default:
                 break;
         }
@@ -1995,9 +1993,9 @@ static void OnKeyDown(uint8_t key) {
     }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
+  osdPopupTimer = 750;
 
   switch (key) {
-
           
       case KEY_STAR: {
           int step = (settings.rssiTriggerLevelUp >= 20) ? 5 : 1;
@@ -2006,9 +2004,13 @@ static void OnKeyDown(uint8_t key) {
           if(appMode == CHANNEL_MODE) SLRssiTriggerLevelUp[ScanListNumber[scanInfo.i]] = settings.rssiTriggerLevelUp;
           if (!SpectrumMonitor) Skip();
           char triggerText[32];
-          sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
+          
+          if (settings.rssiTriggerLevelUp == 50)
+              sprintf(triggerText, "Trigger: oo");
+          else 
+              sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
           ShowOSDPopup(triggerText);
-      break;
+          break;
       }
 
       case KEY_F: {
@@ -2018,41 +2020,42 @@ static void OnKeyDown(uint8_t key) {
           if(appMode == CHANNEL_MODE) SLRssiTriggerLevelUp[ScanListNumber[scanInfo.i]] = settings.rssiTriggerLevelUp;
           if (!SpectrumMonitor) Skip();
           char triggerText[32];
-          sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
+          if (settings.rssiTriggerLevelUp == 50)
+              sprintf(triggerText, "Trigger: oo");
+          else 
+              sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
           ShowOSDPopup(triggerText);
-    break;
+          break;
       }
 
 
       case KEY_3:
-      if (historyListActive) { DeleteHistoryItem();}
-      else {
-        ToggleListeningBW(1);
-        char bwText[32];
-        sprintf(bwText, "BW: %s", bwNames[settings.listenBw]);
-        ShowOSDPopup(bwText);
-      }
-
-      break;
+        if (historyListActive) { DeleteHistoryItem();}
+        else {
+          ToggleListeningBW(1);
+          char bwText[32];
+          sprintf(bwText, "BW: %s", bwNames[settings.listenBw]);
+          ShowOSDPopup(bwText);
+        }
+        break;
      
       case KEY_9:
         ToggleModulation();
-		 // NOWE OSD dla zmiany modulacji
-    char modText[32];
-    sprintf(modText, "MOD: %s", gModulationStr[settings.modulationType]);
-    ShowOSDPopup(modText);
-    break;
+		    char modText[32];
+        sprintf(modText, "MOD: %s", gModulationStr[settings.modulationType]);
+        ShowOSDPopup(modText);
+        break;
 
       case KEY_1: //SKIP OR SAVE
         Skip();
-      break;
+        break;
      
      case KEY_7:
 
         if (historyListActive) {
-#ifdef ENABLE_EEPROM_512K
+        #ifdef ENABLE_EEPROM_512K
           WriteHistory();
-#endif
+        #endif
         }
         else {
           SaveSettings(); 
@@ -3000,6 +3003,7 @@ static void SaveSettings()
   // Write in 8-byte chunks
   for (uint16_t addr = 0; addr < sizeof(eepromData); addr += 8) 
     EEPROM_WriteBuffer(addr + 0x1D10, ((uint8_t*)&eepromData) + addr);
+  osdPopupTimer = 1500;
   ShowOSDPopup("Params Saved");
 }
 
@@ -3054,7 +3058,7 @@ static void ClearSettings()
   BK4819_WriteRegister(BK4819_REG_3C, 20360);
   BK4819_WriteRegister(BK4819_REG_43, 13896);
   BK4819_WriteRegister(BK4819_REG_2B, 49152);
-  //SaveSettings(); 
+  osdPopupTimer = 1500;
   ShowOSDPopup("Default Settings");
 }
 
@@ -3076,8 +3080,7 @@ static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
             channel_count++;
         }
     }
-    if (first_channel == 0xFFFF)
-        return false; // Brak kanałów
+    if (first_channel == 0xFFFF) return false; 
 
     SETTINGS_FetchChannelName(channel_name, first_channel);
     if (channel_name[0] == '\0') {
@@ -3211,10 +3214,11 @@ static void GetHistoryItemText(uint8_t index, char* buffer) {
     char freqStr[10];
     char Name[12]="";
     uint8_t dcount;
-    if (!HFreqs[index]) return;
-    snprintf(freqStr, sizeof(freqStr), "%u.%05u", HFreqs[index]/100000, HFreqs[index]%100000);
+    uint32_t f=HFreqs[index];
+    if (f < 1400000 || f > 130000000) return;
+    snprintf(freqStr, sizeof(freqStr), "%u.%05u", f/100000, f%100000);
     RemoveTrailZeros(freqStr);
-    uint16_t Hchannel = BOARD_gMR_fetchChannel(HFreqs[index]);
+    uint16_t Hchannel = BOARD_gMR_fetchChannel(f);
     if(gCounthistory) dcount = HCount[index];
     else dcount = HCount[index]/2;
     if (Hchannel != 0xFFFF) ReadChannelName(Hchannel,Name);
@@ -3314,8 +3318,6 @@ static void RenderParametersSelect() {
 
 static void RenderHistoryList() {
     char headerString[24];
-    
-    
     // Clear display buffer
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
     
@@ -3346,9 +3348,8 @@ static void RenderHistoryList() {
         if (itemIndex >= CountValidHistoryItems()) break;
         char itemText[32];
         GetHistoryItemText(itemIndex, itemText);
-        if (strcmp(itemText, "") == 0) continue;
+        //if (strcmp(itemText, "") == 0) continue;
         uint8_t lineNumber = FIRST_ITEM_LINE + i;
-        
         if (itemIndex == selectedIndex) {
             for (uint8_t x = 0; x < LCD_WIDTH; x++) {
                 for (uint8_t y = lineNumber * 8; y < (lineNumber + 1) * 8; y++) {
@@ -3357,10 +3358,8 @@ static void RenderHistoryList() {
             }
             UI_PrintStringSmall(itemText, 1, 0, lineNumber, 1);
             }
-        
         else {UI_PrintStringSmall(itemText, 1, 0, lineNumber, 0);}
         } 
-    
     ST7565_BlitFullScreen();
 }
 
@@ -3393,7 +3392,7 @@ static void RenderScanListChannels() {
 static void RenderScanListChannelsDoubleLines(const char* title, uint8_t numItems, 
                                              uint8_t selectedIndex, uint8_t scrollOffset) {
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
-    UI_PrintStringSmall(title, 1, LCD_WIDTH - 1, 0,1);
+    UI_PrintStringSmall(title, 1, 0, 0,1);
     
     const uint8_t MAX_ITEMS_VISIBLE = 3; // 3 kanały x 2 linie = 6 linii
     
@@ -3407,7 +3406,7 @@ static void RenderScanListChannelsDoubleLines(const char* title, uint8_t numItem
         
         uint32_t freq = gMR_ChannelFrequencyAttributes[channelIndex].Frequency;
         char freqStr[16];
-        sprintf(freqStr, "... %u.%05u", freq/100000, freq%100000);
+        sprintf(freqStr, " %u.%05u", freq/100000, freq%100000);
         RemoveTrailZeros(freqStr);
         
         uint8_t line1 = 1 + i * 2;
@@ -3415,15 +3414,18 @@ static void RenderScanListChannelsDoubleLines(const char* title, uint8_t numItem
         
         char nameText[20], freqText[20];
         if (itemIndex == selectedIndex) {
-            sprintf(nameText, ">%3d: %s", channelIndex + 1, channel_name);
-            sprintf(freqText, " %s", freqStr);
+            sprintf(nameText, "%3d: %s", channelIndex + 1, channel_name);
+            sprintf(freqText, "    %s", freqStr);
+            UI_PrintStringSmall(nameText, 1, 0, line1,1);
+            UI_PrintStringSmall(freqText, 1, 0, line2,1);
         } else {
-            sprintf(nameText, " %3d: %s", channelIndex + 1, channel_name);
-            sprintf(freqText, " %s", freqStr);
+            sprintf(nameText, "%3d: %s", channelIndex + 1, channel_name);
+            sprintf(freqText, "    %s", freqStr);
+            UI_PrintStringSmall(nameText, 1, 0, line1,0);
+            UI_PrintStringSmall(freqText, 1, 0, line2,0);
         }
         
-        UI_PrintStringSmall(nameText, 1, 0, line1,0);
-        UI_PrintStringSmall(freqText, 1, 0, line2,0);
+
     }
     
     ST7565_BlitFullScreen();

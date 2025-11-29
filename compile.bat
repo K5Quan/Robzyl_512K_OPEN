@@ -30,6 +30,8 @@ del .\compiled-firmware\*.bin
 docker build -t uvk5 .
 docker run --rm -v %CD%\compiled-firmware:/app/compiled-firmware uvk5 /bin/bash -c "cd /app && make -s ENABLE_FR_BAND=1 ENABLE_EEPROM_512K=1 TARGET=robzyl512k_beta.en.fr && cp *packed.bin compiled-firmware/"
 docker run --rm -v %CD%\compiled-firmware:/app/compiled-firmware uvk5 /bin/bash -c "cd /app && make -s ENABLE_FR_BAND=1 TARGET=robzyl8k_beta.en.fr && cp *packed.bin compiled-firmware/"
+docker run --rm -v %CD%\compiled-firmware:/app/compiled-firmware uvk5 /bin/bash -c "cd /app && make -s ENABLE_FR_BAND=1 SCANLIST_SHOW_DETAIL=0 TARGET=robzyl8k_beta.nodetails.fr && cp *packed.bin compiled-firmware/"
+docker run --rm -v %CD%\compiled-firmware:/app/compiled-firmware uvk5 /bin/bash -c "cd /app && make -s ENABLE_FR_BAND=1 ENABLE_EEPROM_512K=1 ENABLE_SCREENSHOT=1 ENABLE_SCANLIST_SHOW_DETAIL=0 TARGET=robzyl.fr.512k.screenshot && cp *packed.bin compiled-firmware/"
 docker run --rm -v %CD%\compiled-firmware:/app/compiled-firmware uvk5 /bin/bash -c "cd /app && make -s ENABLE_KO_BAND=1 ENABLE_EEPROM_512K=1 TARGET=robzyl_test_KO_512k && cp *packed.bin compiled-firmware/"
 time /t
 pause
