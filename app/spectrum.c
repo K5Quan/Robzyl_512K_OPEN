@@ -47,15 +47,14 @@ static uint32_t free_ram_bytes(void)
 }
 
 #define MAX_VISIBLE_LINES 6
-#define HISTORY_SIZE 30
 
-/*   */
 static volatile bool gSpectrumChangeRequested = false;
 static volatile uint8_t gRequestedSpectrumState = 0;
 
-uint32_t HFreqs[HISTORY_SIZE]= {0};
-uint8_t HCount[HISTORY_SIZE]= {0};
-bool HBlacklisted[HISTORY_SIZE]= {0};
+#define HISTORY_SIZE 30
+uint32_t    HFreqs[HISTORY_SIZE];
+uint8_t     HCount[HISTORY_SIZE];
+bool  HBlacklisted[HISTORY_SIZE];
 static bool gHistoryScan = false; // Indicateur de scan de l'historique
 
 /////////////////////////////Parameters://///////////////////////////
@@ -189,7 +188,7 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
                              frequencyChangeStep: 80000,
                              rssiTriggerLevelUp: 20,
                              bw: BK4819_FILTER_BW_WIDE,
-                             listenBw: BK4819_FILTER_BW_NARROWEST,
+                             listenBw: BK4819_FILTER_BW_WIDE,
                              modulationType: false,
                              dbMin: -128,
                              dbMax: 10,
@@ -200,7 +199,6 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
 
 uint32_t currentFreq, tempFreq;
 uint8_t rssiHistory[128];
-uint8_t indexFd = 0;
 uint8_t indexFs = 0;
 int ShowLines = 3;
 uint8_t freqInputIndex = 0;
@@ -878,11 +876,11 @@ static void ToggleRX(bool on) {
           }
     
     if (on) { 
-        //if (StopSpectrum == 0) StopSpectrum = 5000;
-        //BK4819_SetFilterBandwidth(settings.listenBw, false);
+        BK4819_SetFilterBandwidth(settings.listenBw, false);
         BK4819_WriteRegister(BK4819_REG_3F, BK4819_REG_02_CxCSS_TAIL);
 
     } else { 
+        BK4819_SetFilterBandwidth(BK4819_FILTER_BW_WIDE, false); //Scan in 25K bandwidth
         if(appMode!=CHANNEL_MODE) BK4819_WriteRegister(0x43, GetBWRegValueForScan());
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
     }
@@ -945,7 +943,6 @@ static bool InitScan() {
       uint16_t currentChannel = scanChannel[0];
       scanInfo.f = gMR_ChannelFrequencyAttributes[currentChannel].Frequency; 
     }
-    //BK4819_SetFilterBandwidth(settings.listenBw, false);
     return scanInitializedSuccessfully;
 }
 
@@ -1649,7 +1646,23 @@ static void Skip() {
     ToggleRX(false);
     NextScanStep();
 }
-    
+
+static void SetTrigger50(){
+  static int8_t previousTrigger = 0;
+  char triggerText[32];
+  if (settings.rssiTriggerLevelUp == 50) {
+      sprintf(triggerText, "Trigger: oo");
+      for (int i = 0; i < 15; i++) {SLRssiTriggerLevelUp[i] = 50;}
+      for (int i = 0; i < 32; i++) {BPRssiTriggerLevelUp[i] = 50;}
+  }
+  else {
+      sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
+      if (previousTrigger == 50) LoadSettings();
+  }
+  ShowOSDPopup(triggerText);
+  previousTrigger = settings.rssiTriggerLevelUp;
+}
+
 static void OnKeyDown(uint8_t key) {
         BACKLIGHT_TurnOn();
   
@@ -2013,13 +2026,7 @@ static void OnKeyDown(uint8_t key) {
           if(appMode == SCAN_BAND_MODE) BPRssiTriggerLevelUp[bl] = settings.rssiTriggerLevelUp;
           if(appMode == CHANNEL_MODE) SLRssiTriggerLevelUp[ScanListNumber[scanInfo.i]] = settings.rssiTriggerLevelUp;
           if (!SpectrumMonitor) Skip();
-          char triggerText[32];
-          
-          if (settings.rssiTriggerLevelUp == 50)
-              sprintf(triggerText, "Trigger: oo");
-          else 
-              sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
-          ShowOSDPopup(triggerText);
+          SetTrigger50();
           break;
       }
 
@@ -2029,12 +2036,7 @@ static void OnKeyDown(uint8_t key) {
           if(appMode == SCAN_BAND_MODE) BPRssiTriggerLevelUp[bl] = settings.rssiTriggerLevelUp;
           if(appMode == CHANNEL_MODE) SLRssiTriggerLevelUp[ScanListNumber[scanInfo.i]] = settings.rssiTriggerLevelUp;
           if (!SpectrumMonitor) Skip();
-          char triggerText[32];
-          if (settings.rssiTriggerLevelUp == 50)
-              sprintf(triggerText, "Trigger: oo");
-          else 
-              sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
-          ShowOSDPopup(triggerText);
+          SetTrigger50();
           break;
       }
 
