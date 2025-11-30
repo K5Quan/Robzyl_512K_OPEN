@@ -1536,7 +1536,7 @@ static void DrawF(uint32_t f) {
           GUI_DisplaySmallest(line1b, 0, 8,  true,true);
           GUI_DisplaySmallest(line2,  64, 8,  true,true);
           GUI_DisplaySmallest(line3b, 0, 14, true,true);
-          GUI_DisplaySmallest(line3,  64, 14, true,true);
+          GUI_DisplaySmallest(line3,  0, 20, true,true);
           ArrowLine = 3;
         }
         
@@ -3070,6 +3070,7 @@ static void ClearSettings()
   BK4819_WriteRegister(BK4819_REG_2B, 49152);
   osdPopupTimer = 1500;
   ShowOSDPopup("Default Settings");
+  SaveSettings();
 }
 
 
