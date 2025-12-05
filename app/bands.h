@@ -27,7 +27,7 @@ static const bandparameters BParams[32] = {
     {"AIR MIL1",      13800000,         14400000,       S_STEP_25_0kHz,   MODULATION_AM},
     {"AIR MIL2",      22500000,         24107500,       S_STEP_25_0kHz,   MODULATION_AM},
     {"AIR MIL3",      33540000,         33970000,       S_STEP_25_0kHz,   MODULATION_AM},
-    {"PMR 446",       446006f25,         44619375,       S_STEP_12_5kHz,   MODULATION_FM},
+    {"PMR 446",       44600625,         44619375,       S_STEP_12_5kHz,   MODULATION_FM},
     {"PMR 446b",      44600000,         44620000,       S_STEP_6_25kHz,   MODULATION_FM},
     {"FREENET",       14902500,         14911250,       S_STEP_12_5kHz,   MODULATION_FM},
     {"DMR VHF",       14600000,         17000000,       S_STEP_12_5kHz,   MODULATION_FM},

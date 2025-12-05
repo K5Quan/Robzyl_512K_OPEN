@@ -368,7 +368,7 @@ LDFLAGS += -Wl,-Map,$(TARGET).map
 
 ifeq ($(ENABLE_LTO),0)
     # Throw away unneeded func/data sections like LTO does
-    LDFLAGS += -Wl,--gc-sections
+    # LDFLAGS += -Wl,--gc-sections
 endif
 
 ifeq ($(DEBUG),1)

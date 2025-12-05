@@ -1834,7 +1834,6 @@ static void OnKeyDown(uint8_t key) {
                     ToggleScanList(validScanListIndices[scanListSelectedIndex], 1);
                     SetState(SPECTRUM);
                     ResetModifiers();
-                    RelaunchScan();
                     gForceModulation = 0; //Kolyan request release modulation
                 }
                 break;
@@ -1842,7 +1841,6 @@ static void OnKeyDown(uint8_t key) {
         case KEY_EXIT: // Exit scan list selection
                 SetState(SPECTRUM); // Return to scanning mode
                 ResetModifiers();
-                RelaunchScan(); 
                 gForceModulation = 0; //Kolyan request release modulation
                 break;
 #endif // ENABLE_SCANLIST_SHOW_DETAIL
@@ -2040,6 +2038,8 @@ static void OnKeyDown(uint8_t key) {
           settings.rssiTriggerLevelUp = (settings.rssiTriggerLevelUp >= 50? 0 : settings.rssiTriggerLevelUp + step);
           if(appMode == SCAN_BAND_MODE) BPRssiTriggerLevelUp[bl] = settings.rssiTriggerLevelUp;
           if(appMode == CHANNEL_MODE) SLRssiTriggerLevelUp[ScanListNumber[scanInfo.i]] = settings.rssiTriggerLevelUp;
+          SPECTRUM_PAUSED = true;
+          SpectrumPauseCount = 100; //pause to set Uxx
           if (!SpectrumMonitor) Skip();
           SetTrigger50();
           break;
@@ -2050,6 +2050,8 @@ static void OnKeyDown(uint8_t key) {
           settings.rssiTriggerLevelUp = (settings.rssiTriggerLevelUp <= 0? 50 : settings.rssiTriggerLevelUp - step);
           if(appMode == SCAN_BAND_MODE) BPRssiTriggerLevelUp[bl] = settings.rssiTriggerLevelUp;
           if(appMode == CHANNEL_MODE) SLRssiTriggerLevelUp[ScanListNumber[scanInfo.i]] = settings.rssiTriggerLevelUp;
+          SPECTRUM_PAUSED = true;
+          SpectrumPauseCount = 100; //pause to set Uxx
           if (!SpectrumMonitor) Skip();
           SetTrigger50();
           break;
@@ -2144,6 +2146,12 @@ static void OnKeyDown(uint8_t key) {
               ToggleScanList(validScanListIndices[scanListSelectedIndex], 1);
               SetState(SPECTRUM);
               ResetModifiers();
+              break;
+        }
+        else if(appMode==SCAN_RANGE_MODE){
+              uint32_t RangeStep = gScanRangeStop - gScanRangeStart;
+              gScanRangeStop  += RangeStep;
+              gScanRangeStart += RangeStep;
               RelaunchScan();
               break;
       }
@@ -2178,6 +2186,12 @@ static void OnKeyDown(uint8_t key) {
             ToggleScanList(validScanListIndices[scanListSelectedIndex], 1);
             SetState(SPECTRUM);
             ResetModifiers();
+            break;
+        }
+        else if(appMode==SCAN_RANGE_MODE){
+            uint32_t RangeStep = gScanRangeStop - gScanRangeStart;
+            gScanRangeStop  -= RangeStep;
+            gScanRangeStart -= RangeStep;
             RelaunchScan();
             break;
       }
@@ -3043,11 +3057,11 @@ static void ClearSettings()
   settings.scanListEnabled[0] = 1;
   settings.rssiTriggerLevelUp = 5;
   settings.listenBw = 1;
-  gScanRangeStart = 1400000;
-  gScanRangeStop = 13000000;
+  gScanRangeStart = 43000000;
+  gScanRangeStop  = 44000000;
   DelayRssi = 3;
   PttEmission = 2;
-  settings.scanStepIndex = S_STEP_500kHz;
+  settings.scanStepIndex = S_STEP_10_0kHz;
   ShowLines = 3;
   SpectrumDelay = 0;
   MaxListenTime = 0;
