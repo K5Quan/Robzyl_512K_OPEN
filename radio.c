@@ -428,7 +428,7 @@ void RADIO_ConfigureSquelchAndOutputPower(VFO_Info_t *pInfo)
 
 	EEPROM_ReadBuffer(0x1ED0 + (Band * 16) + (pInfo->OUTPUT_POWER * 3), Txp, 3);
 	const uint8_t p1 = 100;
-	const uint8_t p2 = 2;
+	const uint8_t p2 = 1;
 	const uint8_t p3 = 40;	
 	// Robby69 reduced power
 	    for(uint8_t p = 0; p < 3; p++)

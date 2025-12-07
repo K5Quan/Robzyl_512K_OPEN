@@ -51,7 +51,12 @@ static uint32_t free_ram_bytes(void)
 static volatile bool gSpectrumChangeRequested = false;
 static volatile uint8_t gRequestedSpectrumState = 0;
 
-#define HISTORY_SIZE 200
+#ifdef ENABLE_EEPROM_512K
+  #define HISTORY_SIZE 100
+#else
+  #define HISTORY_SIZE 200
+#endif
+
 static uint32_t    HFreqs[HISTORY_SIZE];
 static uint8_t     HCount[HISTORY_SIZE];
 static bool  HBlacklisted[HISTORY_SIZE];
