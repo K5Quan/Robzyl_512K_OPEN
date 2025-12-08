@@ -883,7 +883,8 @@ void APP_TimeSlice500ms(void)
 			BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryVoltageIndex++]);
 			if (gBatteryVoltageIndex > 3)
 				gBatteryVoltageIndex = 0;
-			BATTERY_GetReadings(true);
+			//BATTERY_GetReadings(true);
+			BATTERY_GetReadings();
 		}
 	}
 	

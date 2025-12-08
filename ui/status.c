@@ -91,8 +91,8 @@ void UI_DisplayStatus()
 		char         s[8];
 		unsigned int space_needed;
 		
-		unsigned int x2 = LCD_WIDTH - sizeof(BITMAP_BatteryLevel1) - 3;
-
+		//unsigned int x2 = LCD_WIDTH - sizeof(BITMAP_BatteryLevel1) - 3;
+		unsigned int x2 = LCD_WIDTH - 3;
 		switch (gSetting_battery_text)
 		{
 			default:
@@ -123,10 +123,10 @@ void UI_DisplayStatus()
 	}
 		
 	// move to right side of the screen
-	x = LCD_WIDTH - sizeof(BITMAP_BatteryLevel1);
+	//x = LCD_WIDTH - sizeof(BITMAP_BatteryLevel1);
 
 	// BATTERY LEVEL indicator
-	UI_DrawBattery(line + x, gBatteryDisplayLevel, gLowBatteryBlink);
+	//UI_DrawBattery(line + x, gBatteryDisplayLevel, gLowBatteryBlink);
 	
 	// **************
 

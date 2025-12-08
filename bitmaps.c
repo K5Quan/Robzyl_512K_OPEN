@@ -53,7 +53,7 @@ const uint8_t BITMAP_RX[8] =
 	0b00000000
 };
 
-const uint8_t BITMAP_BatteryLevel[2] =
+/* const uint8_t BITMAP_BatteryLevel[2] =
 {
 	0b01011101,
 	0b01011101
@@ -103,7 +103,7 @@ const uint8_t BITMAP_BatteryLevel[2] =
 		0b00100010,
 		0b00111110
 	};
-#endif
+#endif */
 
 const uint8_t BITMAP_KeyLock[6] =
 {	// teeny padlock symbol

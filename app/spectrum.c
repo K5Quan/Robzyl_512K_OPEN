@@ -51,11 +51,8 @@ static uint32_t free_ram_bytes(void)
 static volatile bool gSpectrumChangeRequested = false;
 static volatile uint8_t gRequestedSpectrumState = 0;
 
-#ifdef ENABLE_EEPROM_512K
-  #define HISTORY_SIZE 100
-#else
-  #define HISTORY_SIZE 200
-#endif
+
+#define HISTORY_SIZE 100
 
 static uint32_t    HFreqs[HISTORY_SIZE];
 static uint8_t     HCount[HISTORY_SIZE];
@@ -1379,7 +1376,7 @@ switch(SpectrumMonitor) {
   
   if (spectrumElapsedCount > 0 ){len = sprintf(&String[pos],"%d ", spectrumElapsedCount/100);pos += len;} */
   
-  GUI_DisplaySmallest(String, 0, 1, true,true);
+  
   BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4]);
 
   uint16_t voltage = (gBatteryVoltages[0] + gBatteryVoltages[1] + gBatteryVoltages[2] +
@@ -1387,7 +1384,10 @@ switch(SpectrumMonitor) {
             4 * 760 / gBatteryCalibration[3];
 
   unsigned perc = BATTERY_VoltsToPercent(voltage);
-  gStatusLine[116] = 0b00011100;
+  len = sprintf(&String[pos],"%d%%", perc);
+  //pos += len;
+  GUI_DisplaySmallest(String, 0, 1, true,true);
+/*   gStatusLine[116] = 0b00011100;
   gStatusLine[117] = 0b00111110;
   for (int i = 118; i <= 126; i++) {gStatusLine[i] = 0b00100010;}
   
@@ -1395,7 +1395,7 @@ switch(SpectrumMonitor) {
     if (127 - i <= (perc+5)*9/100) {
       gStatusLine[i] = 0b00111110;
     }
-  }
+  } */
   
 
 }

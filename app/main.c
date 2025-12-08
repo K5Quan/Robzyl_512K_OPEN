@@ -149,6 +149,8 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 	}
 }
 
+
+//ФУНКЦИИ КНОПОК 4
 static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
 	if (bKeyHeld)
@@ -174,6 +176,8 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 	{	// key is pressed
 		return; // don't use the key till it's released
 	}
+
+	//конец кнопок 4
 
 	if (!gWasFKeyPressed)
 	{	// F-key wasn't pressed
@@ -294,6 +298,7 @@ static void MAIN_Key_MENU()
 		}
 }
 
+//УПРАВЛЕНИЕ SQL 
 static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 {
 	uint16_t Channel = gEeprom.ScreenChannel;
@@ -303,6 +308,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 	uint16_t Next;
 
 	if (IS_FREQ_CHANNEL(Channel))
+
 	{
 		uint32_t frequency = APP_SetFrequencyByStep(gTxVfo, Direction);
 		if (RX_freq_check(frequency) == 0xFF) return;
@@ -319,7 +325,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 	gVfoConfigureMode     = VFO_CONFIGURE_RELOAD;
 	gPttWasReleased       = true;
 }
-
+//END SQL	
 
 void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
@@ -355,12 +361,31 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 		case KEY_MENU:
 			MAIN_Key_MENU();
 			break;
+
+
+		//КНОПКИ ВВЕРХ ВНИЗ SQL   
 		case KEY_UP:
-			MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, 1);
-			break;
 		case KEY_DOWN:
-			MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, -1);
+			if (gWasFKeyPressed && bKeyPressed && !bKeyHeld) {
+				// F + UP/DOWN — меняем SQL
+				if (Key == KEY_UP) {
+					if (gEeprom.SQUELCH_LEVEL < 9)
+						gEeprom.SQUELCH_LEVEL++;
+				} else {
+					if (gEeprom.SQUELCH_LEVEL > 0)
+						gEeprom.SQUELCH_LEVEL--;
+				}
+				gRequestSaveSettings = true;   // сохраним в EEPROM
+				gUpdateDisplay = true;         // обновим экран (U0..U9)
+			}
+			else {
+				// Обычное поведение UP/DOWN
+				MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, (Key == KEY_UP) ? 1 : -1);
+			}
+			gWasFKeyPressed = false;  // сбрасываем F в любом случае
 			break;
+		//END UP/DOWN
+
 		case KEY_EXIT:
 			MAIN_Key_EXIT(bKeyPressed, bKeyHeld);
 			break;

@@ -92,7 +92,8 @@ void Main(void)
 	for (i = 0; i < ARRAY_SIZE(gBatteryVoltages); i++)
 		BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[i]);
 
-	BATTERY_GetReadings(false);
+	//BATTERY_GetReadings(false);
+	BATTERY_GetReadings();
 
 	BootMode = BOOT_GetMode();
 	
