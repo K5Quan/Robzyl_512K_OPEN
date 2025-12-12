@@ -78,12 +78,14 @@ static bool gCounthistory = 1;        // case 11
 //RAM                                 // case 13     
 uint16_t SpectrumSleepMs = 0;         // case 14
 uint8_t Noislvl_OFF = 60;             // case 15
-uint8_t Noislvl_ON = 50;              // case 15
-uint16_t UOO_trigger = 15;            // case 16
+uint8_t Noislvl_ON = 50;
+uint16_t osdPopupSetting = 1000;      // case 16
+uint16_t UOO_trigger = 15;            // case 17
 
-#define PARAMETER_COUNT 17
+
+#define PARAMETER_COUNT 18
 ////////////////////////////////////////////////////////////////////
-
+uint16_t osdPopupTimer = 1000;
 static uint32_t Fmax = 0;
 uint32_t spectrumElapsedCount = 0;
 uint32_t SpectrumPauseCount = 0;
@@ -366,16 +368,15 @@ static void ResetInterrupts();
 static char StringCode[10] = "";
 
 //
-static uint16_t osdPopupTimer = 0;
 static char osdPopupText[32] = "";
 
 // 
 void ShowOSDPopup(const char *str)
-{
+{   osdPopupTimer = osdPopupSetting;
     strncpy(osdPopupText, str, sizeof(osdPopupText)-1);
     osdPopupText[sizeof(osdPopupText)-1] = '\0';  // Zabezpieczenie przed przepełnieniem
-    UI_DisplayPopup(osdPopupText);
-    ST7565_BlitFullScreen();
+    //UI_DisplayPopup(osdPopupText);
+    //ST7565_BlitFullScreen();
 }
 
 
@@ -603,7 +604,7 @@ static void DeleteHistoryItem(void) {
     }
     
     // Mettre à jour l'affichage
-    osdPopupTimer = 750;
+    
     ShowOSDPopup("Deleted");
     gUpdateDisplay = true;
 }
@@ -628,7 +629,7 @@ static void SaveHistoryToFreeChannel(void) {
         // Si le canal n'est pas vide (0xFFFFFFFF) et que la fréquence correspond
         if (freqInMem != 0xFFFFFFFF && freqInMem == f) {
             sprintf(str, "Exist CH %d", i + 1);
-            osdPopupTimer = 1500;
+            
             ShowOSDPopup(str);
             return; // On arrête ici, pas de sauvegarde
         }
@@ -647,7 +648,7 @@ static void SaveHistoryToFreeChannel(void) {
     }
 
     // --- ÉTAPE 3 : SAUVEGARDER ---
-    osdPopupTimer = 1500;
+    
     if (freeCh != -1) {
         VFO_Info_t tempVFO;
         memset(&tempVFO, 0, sizeof(tempVFO)); 
@@ -705,7 +706,7 @@ void ReadHistory(void) {
         indexFs = position + 1;
       }
     }
-    osdPopupTimer = 1500;
+    
     ShowOSDPopup("History Loaded");
 }
 
@@ -726,7 +727,7 @@ void WriteHistory(void) {
     History.HBlacklisted = 0xFF;
     EEPROM_WriteBuffer(ADRESS_HISTORY + indexFs * sizeof(HistoryStruct),
                        (uint8_t *)&History);
-    osdPopupTimer = 1500;
+    
     ShowOSDPopup("History Saved");
 }
 
@@ -1694,7 +1695,6 @@ static void OnKeyDown(uint8_t key) {
      
     if (historyListActive) {
           gHistoryScan = !gHistoryScan;
-          osdPopupTimer = 1000;
           if (gHistoryScan) {
               ShowOSDPopup("SCAN HISTORY ON");
               gIsPeak = false; // Force le redémarrage si on était bloqué
@@ -1900,7 +1900,6 @@ static void OnKeyDown(uint8_t key) {
                 break;
           case KEY_3:
           case KEY_1:
-          {
               bool isKey3 = (key == KEY_3);
               switch(parametersSelectedIndex) {//SEE HERE parametersSelectedIndex
                   case 0: // DelayRssi
@@ -1989,17 +1988,20 @@ static void OnKeyDown(uint8_t key) {
                                  (Noislvl_OFF <= 30 ? 100 : Noislvl_OFF - 1);
                       Noislvl_ON = Noislvl_OFF - 10;                      
                       break;
-                  case 16: // UOO_trigger
+                  case 16: //osdPopupSetting
+                      osdPopupSetting = isKey3 ? 
+                                 (osdPopupSetting >= 10000 ? 0 : osdPopupSetting + 1000) :
+                                 (osdPopupSetting <= 0 ? 10000 : osdPopupSetting - 1000);
+                      break;
+                  case 17: // UOO_trigger
                       UOO_trigger = isKey3 ? 
                                  (UOO_trigger >= 50 ? 0 : UOO_trigger + 1) :
                                  (UOO_trigger <= 0 ? 50 : UOO_trigger - 1);
                       break;
                   
               }
-            
+        break;
 
-              break;
-          }
         case KEY_7:
           SaveSettings(); 
         break;
@@ -2023,7 +2025,7 @@ static void OnKeyDown(uint8_t key) {
     }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
-  osdPopupTimer = 750;
+  
 
   switch (key) {
           
@@ -2713,24 +2715,22 @@ static void Tick() {
     if (gBacklightCountdown > 0)
       if (--gBacklightCountdown == 0)	BACKLIGHT_TurnOff();
     gNextTimeslice_500ms = false;
-  }
   
-  if (osdPopupTimer > 0) {
-        UI_DisplayPopup(osdPopupText);  // Wyświetl aktualny tekst
-        ST7565_BlitFullScreen();
-        osdPopupTimer -= 10;  // Tick co 10ms
-        if (osdPopupTimer <= 0) {
-            osdPopupText[0] = '\0';  // Wyczyść tekst po wygaśnięciu
-        }
-        return;  // Priorytet dla OSD (?)
-    }
 
+  }
 
   if (gNextTimeslice_10ms) {
     HandleUserInput();
     gNextTimeslice_10ms = 0;
     if (isListening || SpectrumMonitor || WaitSpectrum) UpdateListening(); 
     if(SpectrumPauseCount) SpectrumPauseCount--;
+    if (osdPopupTimer > 0) {
+        UI_DisplayPopup(osdPopupText);  // Wyświetl aktualny tekst
+        ST7565_BlitFullScreen();
+        osdPopupTimer -= 10; 
+        if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';}
+        return;
+    }
 
   }
 
@@ -2911,6 +2911,7 @@ typedef struct {
     uint8_t IndexPS;
     uint8_t Noislvl_OFF;
     uint16_t UOO_trigger;
+    uint16_t osdPopupSetting;
     bool Backlight_On_Rx;
 } SettingsEEPROM;
 
@@ -2953,6 +2954,7 @@ static void LoadSettings()
   Noislvl_OFF = eepromData.Noislvl_OFF;
   Noislvl_ON  = Noislvl_OFF-10; 
   UOO_trigger = eepromData.UOO_trigger;
+  osdPopupSetting = eepromData.osdPopupSetting;
   Backlight_On_Rx = eepromData.Backlight_On_Rx;
   ChannelAttributes_t att;
   for (int i = 0; i < MR_CHANNEL_LAST+1; i++) {
@@ -2996,6 +2998,7 @@ static void SaveSettings()
   eepromData.Backlight_On_Rx = Backlight_On_Rx;
   eepromData.Noislvl_OFF = Noislvl_OFF;
   eepromData.UOO_trigger = UOO_trigger;
+  eepromData.osdPopupSetting = osdPopupSetting;
   
   for (int i = 0; i < 32; i++) { 
       eepromData.BPRssiTriggerLevelUp[i] = BPRssiTriggerLevelUp[i];
@@ -3024,7 +3027,7 @@ static void SaveSettings()
   // Write in 8-byte chunks
   for (uint16_t addr = 0; addr < sizeof(eepromData); addr += 8) 
     EEPROM_WriteBuffer(addr + 0x1D10, ((uint8_t*)&eepromData) + addr);
-  osdPopupTimer = 1500;
+  
   ShowOSDPopup("Params Saved");
 }
 
@@ -3066,6 +3069,7 @@ static void ClearSettings()
   Noislvl_OFF = 60; 
   Noislvl_ON = 50;  
   UOO_trigger = 15;
+  osdPopupSetting = 1000;
   for (int i = 0; i < 32; i++) { 
       BPRssiTriggerLevelUp[i] = 5;
       settings.bandEnabled[i] = 0;
@@ -3080,7 +3084,7 @@ static void ClearSettings()
   BK4819_WriteRegister(BK4819_REG_3C, 20360);
   BK4819_WriteRegister(BK4819_REG_43, 13896);
   BK4819_WriteRegister(BK4819_REG_2B, 49152);
-  osdPopupTimer = 1500;
+  
   ShowOSDPopup("Default Settings");
   SaveSettings();
 }
@@ -3216,8 +3220,17 @@ static void GetParametersText(uint8_t index, char *buffer) {
             sprintf(buffer, "Noislvl_OFF: %d", Noislvl_OFF);
             break;
         case 16:
+            if (osdPopupSetting)
+                sprintf(buffer, "POPUPS: %ds", osdPopupSetting / 1000);
+            else sprintf(buffer, "NO POPUPS");
+            break;
+        
+            break;
+        case 17:
             sprintf(buffer, "UOO_trigger: %d", UOO_trigger);
             break;
+
+        
         default:
             // Gestion d'un index inattendu (optionnel)
             buffer[0] = '\0';
