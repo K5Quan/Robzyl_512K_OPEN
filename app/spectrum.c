@@ -776,6 +776,7 @@ if (historyListActive == true){
               COMMON_SwitchToVFOMode();
           }
           else {
+            gTxVfo->freq_config_RX.Frequency = HFreqs[historyListIndex];
             gEeprom.ScreenChannel = ExitCh;
             gEeprom.MrChannel = ExitCh;
             COMMON_SwitchToChannelMode();
@@ -882,17 +883,16 @@ static void ToggleRX(bool on) {
     if (on && isKnownChannel) {
         if(!gForceModulation) settings.modulationType = channelModulation;
         //NO NAMES memmove(rxChannelName, channelName, sizeof(rxChannelName));
-        RADIO_SetModulation(settings.modulationType);
         BK4819_InitAGC(settings.modulationType);
         
     }
     else if(on && appMode == SCAN_BAND_MODE) {
             if (!gForceModulation) settings.modulationType = BParams[bl].modulationType;
-            RADIO_SetModulation(settings.modulationType);
             BK4819_InitAGC(settings.modulationType);
           }
     
     if (on) { 
+        RADIO_SetModulation(settings.modulationType);
         BK4819_SetFilterBandwidth(settings.listenBw, false);
         BK4819_WriteRegister(BK4819_REG_3F, BK4819_REG_02_CxCSS_TAIL);
 
@@ -3255,19 +3255,88 @@ static void GetParametersText(uint8_t index, char *buffer) {
 }
 
 static void GetHistoryItemText(uint8_t index, char* buffer) {
-        
     char freqStr[10];
-    char Name[12]="";
+    char Name[12] = ""; // 10 chars max + 1 pour \0 + 1 pour sécurité
     uint8_t dcount;
-    uint32_t f=HFreqs[index];
+    uint32_t f = HFreqs[index];
+    
+    buffer[0] = '\0'; 
+
     if (f < 1400000 || f > 130000000) return;
-    snprintf(freqStr, sizeof(freqStr), "%u.%05u", f/100000, f%100000);
+
+    // --- 1. Préparation des données ---
+    snprintf(freqStr, sizeof(freqStr), "%u.%05u", f / 100000, f % 100000);
     RemoveTrailZeros(freqStr);
+    
     uint16_t Hchannel = BOARD_gMR_fetchChannel(f);
-    if(gCounthistory) dcount = HCount[index];
-    else dcount = HCount[index]/2;
-    if (Hchannel != 0xFFFF) ReadChannelName(Hchannel,Name);
-    snprintf(buffer,19, "%s%s %s:%u", HBlacklisted[index] ? "#" : "",freqStr,Name,dcount);
+    
+    if (gCounthistory) {
+        dcount = HCount[index];
+    } else {
+        dcount = HCount[index] / 2;
+    }
+    
+    // Lecture du nom du canal (Argument 1: Index, Argument 2: Buffer)
+    if (Hchannel != 0xFFFF) {
+        ReadChannelName(Hchannel, Name);
+        Name[10] = '\0'; // Troncature explicite du nom à 10 caractères max
+    }
+    
+    const char *blacklistPrefix = HBlacklisted[index] ? "#" : "";
+
+    // --- 2. Détermination de l'espace nécessaire (Max 18 chars) ---
+    const size_t MAX_LINE_CHARS = 18; 
+    
+    // Construction de la chaîne du compteur (Ex: ":5" ou ":1234")
+    char dcountStr[6]; 
+    snprintf(dcountStr, sizeof(dcountStr), ":%u", dcount);
+
+    size_t len_prefix = strlen(blacklistPrefix);
+    size_t len_freq = strlen(freqStr);
+    size_t len_name = strlen(Name);
+    size_t len_dcount = strlen(dcountStr);
+
+    // Longueur requise pour la partie non-fréquence : [Prefix] + [Espace] + [Name] + [Dcount]
+    size_t critical_len = len_prefix + 1 + len_name + len_dcount; 
+    
+    size_t space_for_freq = 0;
+    
+    if (MAX_LINE_CHARS > critical_len) {
+        // Cas nominal : Il y a de la place après le Nom et le Compteur.
+        space_for_freq = MAX_LINE_CHARS - critical_len;
+    } else {
+        // Cas critique : Le Nom et le Compteur sont trop longs. On supprime le Nom.
+        
+        // Recalcul de la longueur critique sans le Nom et l'espace qui le précède.
+        critical_len = len_prefix + 1 + len_dcount;
+        
+        if (MAX_LINE_CHARS > critical_len) {
+            space_for_freq = MAX_LINE_CHARS - critical_len;
+        } else {
+            // Cas très critique : On donne tout l'espace sauf le compteur (très court)
+            space_for_freq = MAX_LINE_CHARS - len_dcount; 
+        }
+        
+        // Suppression du nom pour l'affichage final
+        Name[0] = '\0';
+        len_name = 0;
+    }
+
+    // --- 3. Construction de la chaîne finale (avec troncature de la Fréquence) ---
+    
+    // La longueur finale à afficher pour la fréquence (min(espace_disponible, longueur_réelle))
+    size_t final_freq_len = (space_for_freq > len_freq) ? len_freq : space_for_freq;
+    
+    // Le format : [Prefix][Freq Tronquée][Espace si Nom][Name][Dcount]
+    
+    // Le snprintf final doit toujours garantir que la taille n'est pas dépassée (19)
+    snprintf(buffer, 19, "%s%.*s%s%s%s", 
+             blacklistPrefix,
+             (int)final_freq_len, // Troncature dynamique de la fréquence
+             freqStr, 
+             (len_name > 0) ? " " : "", // Espace si le Nom n'est pas vide (géré par la suppression ci-dessus)
+             Name, 
+             dcountStr);
 }
 
 static void RenderList(const char* title, uint8_t numItems, uint8_t selectedIndex, uint8_t scrollOffset,
