@@ -880,7 +880,7 @@ static void ToggleRX(bool on) {
     }
     else if(on && appMode == SCAN_BAND_MODE) {
             if (!gForceModulation) settings.modulationType = BParams[bl].modulationType;
-            RADIO_SetModulation(BParams[bl].modulationType);
+            RADIO_SetModulation(settings.modulationType);
             BK4819_InitAGC(settings.modulationType);
           }
     
