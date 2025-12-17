@@ -75,9 +75,10 @@ static void UpdateRSSI()
     gCurrentRSSI = rssi;
 }
 
+//************************************ВЫВОД RSSI S-MET ****** REMOVE TO */
 void DrawNumeric(void)
 {
-    int pos = 0;
+    /*int pos = 0;
 	int len = 0;
 	uint32_t cdcssFreq;
 	uint16_t ctcssFreq;
@@ -108,7 +109,7 @@ void DrawNumeric(void)
 				if (code != 0xFF) sprintf(&buf[pos],"D%03oN", DCS_Options[code]);
 		}
 	UI_PrintStringSmall(buf, 1, 0, 0, 0);
-	}
+	}*/
 }
 
 static void CheckForIncoming(void)
