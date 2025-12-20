@@ -37,12 +37,10 @@
 #include "ui/inputbox.h"
 #include "ui/ui.h"
 #include <stdlib.h>
-#include "driver/backlight.h"  // правильный путь
+//#include "debugging.h"
 
-// Флаг для постоянной подсветки (toggle F+8)
-bool gBacklightAlwaysOn = false;
+bool gBacklightAlwaysOn = false;  // подсветка всегда включена (F+8)
 uint8_t gSavedBacklightLevel = 10;  // начальное значение (максимум)
-
 
 static void MAIN_Key_STAR(bool closecall)
 {
@@ -97,6 +95,7 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 			}
 
 			if(gTxVfo->pRX->Frequency < 100000000) { //Robby69 directly go to 1Ghz
+			//if(gTxVfo->Band == 6 && gTxVfo->pRX->Frequency < 100000000) {
 					gTxVfo->Band = 7;
 					gTxVfo->pRX->Frequency = 100000000;
 					return;
@@ -135,7 +134,7 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 			ACTION_SwitchDemodul();
 			break;
 
-			//****************УПРАВЛЕНИЕ ПОДСВЕТКОЙ F8 */
+		//****************УПРАВЛЕНИЕ ПОДСВЕТКОЙ F8 */
 			case KEY_8:
 			if (gWasFKeyPressed) {
 				// F+8 — toggle "подсветка всегда включена"
@@ -169,42 +168,49 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 			}
 			break;
 
-			
 		case KEY_9:
 			gTxVfo->CHANNEL_BANDWIDTH =
 				ACTION_NextBandwidth(gTxVfo->CHANNEL_BANDWIDTH, gTxVfo->Modulation != MODULATION_AM, 0);
 			break;
 
+
 		default:
+			   
 			gWasFKeyPressed = false;
 			break;
 	}
 }
 
+
 //ФУНКЦИИ КНОПОК 4
 static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
 	if (bKeyHeld)
-	{
+	{	// key held down
 		if (bKeyPressed)
 		{
 			if (gScreenToDisplay == DISPLAY_MAIN)
 			{
 				if (gInputBoxIndex > 0)
-				{
-					gInputBoxIndex = 0;
+				{	// delete any inputted chars
+					gInputBoxIndex        = 0;
 					gRequestDisplayScreen = DISPLAY_MAIN;
 				}
 				gWasFKeyPressed = false;
-				processFKeyFunction(Key, false);  // длинное F+цифра
+				   
+				processFKeyFunction(Key, false);
 			}
 		}
+
+
 		return;
 	}
 
+	
+
 	if (bKeyPressed)
 	{
-		return;
+		return; // don't use the key till it's released
 	}
 
 	// === F+8 — toggle "подсветка всегда включена" ===
@@ -238,15 +244,16 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 		return;
 	}
 
-	// === Обычный ввод цифр (короткое нажатие, включая 8) === 
+	
+	// Обычный ввод цифр — только если не F
 	if (!gWasFKeyPressed)
 	{
 		bool isFreqMode = IS_FREQ_CHANNEL(gTxVfo->CHANNEL_SAVE);
-
+		
 		if (!isFreqMode)
 			gKeyInputCountdown = key_input_timeout_500ms;
-
-		INPUTBOX_Append(Key);
+		
+		INPUTBOX_Append(Key);  // ← теперь здесь, после проверки F+8
 		gRequestDisplayScreen = DISPLAY_MAIN;
 
 		if (!isFreqMode)
@@ -257,7 +264,7 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 			if (gInputBoxIndex == 3)
 			{
 				uint16_t Channel = ((gInputBox[0] * 100) + (gInputBox[1] * 10) + gInputBox[2]) - 1;
-
+				
 				if (!RADIO_CheckValidChannel(Channel, false, 0)) 
 				{
 					gInputBoxIndex = 0;
@@ -306,14 +313,12 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 	}
 
 	gWasFKeyPressed = false;
+
 	processFKeyFunction(Key, true);
 }
 
 static void MAIN_Key_EXIT(bool bKeyPressed, bool bKeyHeld)
 {
-	(void)bKeyPressed;
-	(void)bKeyHeld;
-
 	if (!bKeyHeld && bKeyPressed)
 	{	// exit key pressed
 
@@ -354,63 +359,29 @@ static void MAIN_Key_MENU()
 //УПРАВЛЕНИЕ SQL 
 static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 {
-	(void)bKeyPressed;
-	(void)bKeyHeld;
-	(void)Direction;
-
 	uint16_t Channel = gEeprom.ScreenChannel;
-	if (gInputBoxIndex > 0) return;
+	if (!bKeyPressed && !bKeyHeld) return;
+	if (gInputBoxIndex > 0)	return;
 
-	if (IS_FREQ_CHANNEL(Channel))  // VFO-режим
+	uint16_t Next;
+
+	if (IS_FREQ_CHANNEL(Channel))
+
 	{
-		static uint8_t repeat_count = 0;
-
-		if (bKeyHeld)
-		{
-			// Длинное нажатие — запускаем прокрутку после задержки
-			repeat_count++;
-			if (repeat_count < 6) return;  // задержка перед началом прокрутки (~0.4 сек)
-			if (repeat_count > 20) repeat_count = 8;  // ускорение после долгого удержания
-		}
-		else
-		{
-			// Кнопка отпущена — короткое нажатие
-			if (repeat_count == 0)
-			{
-				// короткое нажатие — только один шаг
-				repeat_count = 1;  // делаем один шаг
-			}
-			else
-			{
-				// отпустили после удержания — ничего не делаем (прокрутка уже шла)
-				repeat_count = 0;
-				return;
-			}
-		}
-
-		// делаем шаг
 		uint32_t frequency = APP_SetFrequencyByStep(gTxVfo, Direction);
 		if (RX_freq_check(frequency) == 0xFF) return;
-
 		gTxVfo->freq_config_RX.Frequency = frequency;
 		BK4819_SetFrequency(frequency);
 		gRequestSaveChannel = 1;
-		gUpdateDisplay = true;
-
 		return;
 	}
-	else  // MR-режим
-	{
-		uint16_t Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
-		if (Next == 0xFFFF || Next == Channel) return;
-
-		gEeprom.MrChannel     = Next;
-		gEeprom.ScreenChannel = Next;
-		gRequestSaveVFO       = true;
-		gVfoConfigureMode     = VFO_CONFIGURE_RELOAD;
-		gPttWasReleased       = true;
-		gUpdateDisplay = true;
-	}
+	Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
+	if (Next == 0xFFFF || Next == Channel) return;
+	gEeprom.MrChannel     = Next;
+	gEeprom.ScreenChannel = Next;
+	gRequestSaveVFO       = true;
+	gVfoConfigureMode     = VFO_CONFIGURE_RELOAD;
+	gPttWasReleased       = true;
 }
 //END SQL	
 
@@ -421,25 +392,19 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 		if (bKeyPressed && !bKeyHeld)
 		{
 			gWasFKeyPressed = true;
-			gKeyInputCountdown = 0;
+			// Pas de timeout pour F, reste actif jusqu'à action
+			gKeyInputCountdown = 0; // ou une valeur très grande
 		}
 		return;
 	}
-
-	// Включаем подсветку при любом коротком нажатии кнопки (кроме F)
-	if (bKeyPressed && !bKeyHeld && Key != KEY_F)
-	{
-		BACKLIGHT_TurnOn();
-	}
-
 	if (gFmRadioMode && Key != KEY_PTT && Key != KEY_EXIT)
-	{
-		if (!bKeyHeld && bKeyPressed)
+		{
+			if (!bKeyHeld && bKeyPressed)
 			return;
-	}
+		}
 	switch (Key)
 	{
-		case KEY_0:
+	case KEY_0:
 		case KEY_1:
 		case KEY_2:
 		case KEY_3:
@@ -464,57 +429,54 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     }
     break;
 
-		case KEY_UP:
-		case KEY_DOWN:
-			if (gWasFKeyPressed && bKeyPressed && !bKeyHeld)
-			{
-				if (Key == KEY_UP)
-				{
-					if (gEeprom.SQUELCH_LEVEL < 9)
-						gEeprom.SQUELCH_LEVEL++;
-				}
-				else
-				{
-					if (Key == KEY_DOWN && gEeprom.SQUELCH_LEVEL > 0)
-						gEeprom.SQUELCH_LEVEL--;
-				}
 
-				gRequestSaveSettings = true;
-				gUpdateDisplay = true;
+			//КНОПКИ ВВЕРХ ВНИЗ SQL   
+case KEY_UP:
+case KEY_DOWN:
+    if (gWasFKeyPressed && bKeyPressed && !bKeyHeld)
+    {
+        // F + UP/DOWN — мгновенная смена SQL 0-9
+        if (Key == KEY_UP)
+        {
+            if (gEeprom.SQUELCH_LEVEL < 9)
+                gEeprom.SQUELCH_LEVEL++;
+        }
+        else
+        {
+            if (Key == KEY_DOWN && gEeprom.SQUELCH_LEVEL > 0)
+                gEeprom.SQUELCH_LEVEL--;
+        }
 
-				RADIO_ConfigureSquelchAndOutputPower(gTxVfo);
-				RADIO_ApplySquelch();
-			}
-			else
-			{
-				MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, (Key == KEY_UP) ? 1 : -1);
-			}
-			gWasFKeyPressed = false;
-			break;
+        gRequestSaveSettings = true;
+        gUpdateDisplay = true;
+
+        RADIO_ConfigureSquelchAndOutputPower(gTxVfo);
+        RADIO_ApplySquelch();
+    }
+    else
+    {
+        // Обычное переключение каналов/частот — ВОТ ТУТ ВЫЗЫВАЕМ ТВОЮ ФУНКЦИЮ!
+        MAIN_Key_UP_DOWN(bKeyPressed, bKeyHeld, (Key == KEY_UP) ? 1 : -1);
+    }
+    gWasFKeyPressed = false;
+    break;
+			//END UP/DOWN
 
 		case KEY_EXIT:
 			MAIN_Key_EXIT(bKeyPressed, bKeyHeld);
 			break;
-
 		case KEY_STAR:
 			if (gWasFKeyPressed) MAIN_Key_STAR(1);
 			else MAIN_Key_STAR(0);
 			break;
-
 		case KEY_F:
 			GENERIC_Key_F(bKeyPressed, bKeyHeld);
 			break;
-
 		case KEY_PTT:
 			GENERIC_Key_PTT(bKeyPressed);
 			break;
-
-		case KEY_SIDE1:
-		case KEY_SIDE2:
-		case KEY_INVALID:
-			break;
-
 		default:
+			
 			break;
 	}
 }

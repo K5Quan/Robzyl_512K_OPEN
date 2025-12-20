@@ -62,6 +62,7 @@
 #endif
 
 #include "driver/eeprom.h"
+extern bool gBacklightAlwaysOn;  // подсветка всегда включена (F+8)
 
 bool gCurrentTxState = false;
 
@@ -853,16 +854,14 @@ void APP_TimeSlice500ms(void)
 		}
 
 
-	if (gBacklightCountdown > 0 && 
+if (gBacklightCountdown > 0 && !gBacklightAlwaysOn && 
 		!gAskToSave && 
 		!gCssBackgroundScan &&
-		//!gBacklightAlwaysOn &&  // ← ЭТА СТРОКА ПОДСВЕТКА F8— не гасим, если включён режим "всегда"
-		// don't turn off backlight if user is in backlight menu option
 		!(gScreenToDisplay == DISPLAY_MENU && (UI_MENU_GetCurrentMenuId() == MENU_ABR || UI_MENU_GetCurrentMenuId() == MENU_ABR_MAX)) 
 		) 
 	{	if (--gBacklightCountdown == 0)
-				if (gEeprom.BACKLIGHT_TIME < (ARRAY_SIZE(gSubMenu_BACKLIGHT) - 1)) // backlight is not set to be always on
-					BACKLIGHT_TurnOff();   // turn backlight off
+				if (gEeprom.BACKLIGHT_TIME < (ARRAY_SIZE(gSubMenu_BACKLIGHT) - 1))
+					BACKLIGHT_TurnOff();
 	}
 
 	if (gSerialConfigCountDown_500ms > 0)

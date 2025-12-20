@@ -41,50 +41,71 @@ char gSubtone_String[16] = "";
 
 
 // РИСУЕМ АУДИОБАР И БАР СМЕТРА ОБЩИЙ стирает строку всю
-void DrawLevelBar(uint8_t xpos, uint8_t line, uint8_t level)
+// РИСУЕМ АУДИОБАР СЕКЦИЯМИ — ширина 80 пикселей, секции 5 пикселей шириной, пробел 2 пикселя (шаг 7), высота 7 пикселей (с отступами)
+void DrawLevelBar(uint8_t xpos, uint8_t y_pos, uint8_t level_percent)
 {
-    // Замененный массив, представляющий полностью залитый прямоугольник (4x7 пикселей)
-    const char filledBar[] = { 
-	0b01111100,  // 4 залитых пикселя (сдвинуты, чтобы было ровно 4)
-        0b01111100,
-        0b01111100,
-        0b01111100  // 5-я строка (была 6-я)
-    };
+    const uint8_t bar_width = 80;              // фиксированная ширина 80 пикселей
+    const uint8_t section_width = 5;           // ширина секции
+    const uint8_t gap = 2;                     // пробел между секциями
+    const uint8_t step = section_width + gap;  // шаг 7 пикселей
+    const uint8_t max_sections = 11;           // 11 секций = 55 + 20 = 75 пикселей (оставляем запас для 80)
 
-    uint8_t *p_line = gFrameBuffer[line];
-    // Если вам не нужно очищать всю строку перед отрисовкой, эту строку можно удалить. Если она нужна, оставьте:
-    memset(p_line, 0, LCD_WIDTH); 
-    
-    level = MIN(level, 13);
+    uint8_t sections = (max_sections * level_percent) / 100;
+    if (sections > max_sections) sections = max_sections;
 
-    for(uint8_t i = 0; i < level; i++) {
-        // Копируем новый залитый массив
-        memcpy(p_line + (xpos + i * 5), filledBar, ARRAY_SIZE(filledBar));
+    uint8_t filled_width = sections * step;  // ширина заполненной части
+    if (filled_width > bar_width) filled_width = bar_width;
+
+    // Высота 7 пикселей (5 пикселей бар + 1 сверху + 1 снизу)
+    for (uint8_t dy = 0; dy < 7; dy++) {
+        uint8_t y = y_pos + dy;
+        if (y >= LCD_HEIGHT) continue;
+
+        uint8_t *p_line;
+        uint8_t bit_shift;
+        if (y < 8) {
+            p_line = gStatusLine;
+            bit_shift = y;
+        } else {
+            p_line = gFrameBuffer[(y - 8) / 8];
+            bit_shift = (y - 8) % 8;
+        }
+
+        // Очищаем только область бара (80 пикселей) + справа до конца экрана
+        for (uint8_t x = xpos; x < LCD_WIDTH; x++) {
+            p_line[x] &= ~(1u << bit_shift);
+        }
+    }
+
+    // Заливаем заполненные секции (только чёрные)
+    for (uint8_t s = 0; s < sections; s++) {
+        uint8_t section_x = xpos + s * step;
+
+        for (uint8_t dy = 1; dy < 6; dy++) {  // заливаем средние 5 пикселей (отступ 1 сверху/снизу)
+            uint8_t y = y_pos + dy;
+            if (y >= LCD_HEIGHT) continue;
+
+            uint8_t *p_line;
+            uint8_t bit_shift;
+            if (y < 8) {
+                p_line = gStatusLine;
+                bit_shift = y;
+            } else {
+                p_line = gFrameBuffer[(y - 8) / 8];
+                bit_shift = (y - 8) % 8;
+            }
+
+            for (uint8_t dx = 0; dx < section_width; dx++) {
+                uint8_t x = section_x + dx;
+                if (x >= LCD_WIDTH || x >= xpos + bar_width) break;
+                p_line[x] |= (1u << bit_shift);
+            }
+        }
     }
 }
 
-
-
-
-unsigned int sqrt16(unsigned int value)
-{	// return square root of 'value'
-	unsigned int shift = 16;         // number of bits supplied in 'value' .. 2 ~ 32
-	unsigned int bit   = 1u << --shift;
-	unsigned int sqrti = 0;
-	while (bit)
-	{
-		const unsigned int temp = ((sqrti << 1) | bit) << shift--;
-		if (value >= temp) {
-			value -= temp;
-			sqrti |= bit;
-		}
-		bit >>= 1;
-	}
-	return sqrti;
-}
-
-
-// АУДИОБАР ПРИ ПЕРЕДАЧЕ — в MR и VFO
+// АУДИОБАР ПРИ ПЕРЕДАЧЕ — 80x4 пикселя, раздельные Y для MR и VFO
+// АУДИОБАР ПРИ ПЕРЕДАЧЕ — секции 3 пикселя + пробел 2 пикселя, раздельные X и Y для MR и VFO
 void UI_DisplayAudioBar(void)
 {
 	if(gLowBattery && !gLowBatteryConfirmed) return;
@@ -98,11 +119,22 @@ void UI_DisplayAudioBar(void)
 
 	const unsigned int voice_amp  = BK4819_GetVoiceAmplitudeOut();
 
-	const unsigned int level      = MIN(voice_amp * 8, 65535u);
-	const unsigned int sqrt_level = MIN(sqrt16(level), 124u);
-	uint8_t bars = 9 * sqrt_level / 124;
+	// Увеличенная чувствительность — тихий голос показывает больше секций
+	unsigned int amplified = voice_amp * 3;  // коэффициент усиления (3 — хороший баланс, меняй на 4-5 для ещё больше)
+	if (amplified > 65535u) amplified = 65535u;
 
-	DrawLevelBar(0, 6, bars); // аудиобар при передаче в обоих режимах
+	uint8_t level_percent = amplified * 100 / 65535u;
+
+	// РАЗДЕЛЬНЫЕ КООРДИНАТЫ ДЛЯ MR И VFO
+	uint8_t xpos_mr  = 46;   // MR: X = 5 (отступ слева)
+	uint8_t xpos_vfo = 46;  // VFO: X = 10 (отступ слева)
+	uint8_t y_mr     = 9;  // MR: Y = 50 пикселей
+	uint8_t y_vfo    = 9;  // VFO: Y = 42 пикселя
+
+	uint8_t xpos = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? xpos_mr : xpos_vfo;
+	uint8_t y_pos = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
+
+	DrawLevelBar(xpos, y_pos, level_percent);
 }
 
 // S-МЕТР + AFC + RSSI — бар скрыт, строка AFC/RSSI в MR и VFO при приёме
@@ -150,31 +182,67 @@ void DisplayRSSIBar(const int16_t rssi)
 			sprintf(gSubtone_String, "D%03oN", DCS_Options[code]);
 	}
 
-	// === AFC + RSSI строка — теперь в MR и VFO при приёме ===
-	char fullStr[40] = "";
-	char *p = fullStr;
+	// === AFC, RSSI и S-meter — РАЗДЕЛЬНЫЕ НЕЗАВИСИМЫЕ СТРОКИ САМЫМ МАЛЕНЬКИМ ШРИФТОМ ===
+	// Очищаем строку 6 (если нужно — можно убрать)
+	// memset(gFrameBuffer[6], 0, LCD_WIDTH);
+
+	char afcStr[16] = "";
+	char rssiStr[16] = "";
+	char smeterStr[16] = "";
 
 	// AFC
 	int32_t hz = ((int64_t)(int16_t)BK4819_ReadRegister(0x6D) * 1000LL) / 291LL;
 	if (hz != 0) {
-		p += sprintf(p, "AFC:%+d ", (int)hz);
+		sprintf(afcStr, "AFC:%+d", (int)hz);
 	}
 
-	// RSSI + S-meter
+	// RSSI
+	sprintf(rssiStr, "dBm%d", sLevelAtt.dBmRssi);
+
+	// S-meter
 	if (overS9Bars == 0)
-		sprintf(p, "%d S%d", sLevelAtt.dBmRssi, sLevelAtt.sLevel);
+		sprintf(smeterStr, "S%d", sLevelAtt.sLevel);
 	else
-		sprintf(p, "%d+%ddB", sLevelAtt.dBmRssi, sLevelAtt.over);
+		sprintf(smeterStr, "+%ddB", sLevelAtt.over);
 
-	// Вывод по центру строки 6 (можно сделать независимые позиции — см. ниже)
-	uint8_t text_line = 6;
-	memset(gFrameBuffer[text_line], 0, LCD_WIDTH);
+	// РАЗДЕЛЬНЫЕ КООРДИНАТЫ ДЛЯ КАЖДОЙ СТРОКИ В MR И VFO
+	// Формат: { y_mr, x_mr, y_vfo, x_vfo }
 
-	uint8_t text_len = strlen(fullStr);
-	uint8_t text_width = text_len * 6;
-	uint8_t x_center = (LCD_WIDTH - text_width) / 2;
+	// AFC
+	if (afcStr[0] != '\0')
+	{
+		uint8_t y_mr = 2; uint8_t x_mr = 2;   // MR: Y=48 (строка 6), X=10 (слева)
+		uint8_t y_vfo = 2; uint8_t x_vfo = 4; // VFO: Y=48, X=10
 
-	UI_PrintStringSmall(fullStr, x_center, 0, text_line, 0);
+		uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
+		uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
+
+		GUI_DisplaySmallestDark(afcStr, x, y, false, true);
+	}
+
+	// RSSI
+	if (rssiStr[0] != '\0')
+	{
+		uint8_t y_mr = 2; uint8_t x_mr = 84;   // MR: центр
+		uint8_t y_vfo =2; uint8_t x_vfo = 84; // VFO: центр
+
+		uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
+		uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
+
+		GUI_DisplaySmallestDark(rssiStr, x, y, false, true);
+	}
+
+	// S-meter
+	if (smeterStr[0] != '\0')
+	{
+		uint8_t y_mr = 2; uint8_t x_mr = 70;   // MR: справа
+		uint8_t y_vfo = 2; uint8_t x_vfo = 70; // VFO: справа
+
+		uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
+		uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
+
+		GUI_DisplaySmallestDark(smeterStr, x, y, false, true);
+	}
 
 		/*/ Независимые позиции строки AFC + RSSI
 	uint8_t text_line;
@@ -515,7 +583,7 @@ const char *bw = bwStr;
 	{	
 		if (gCurrentFunction == FUNCTION_TRANSMIT) {
 			center_line = CENTER_LINE_AUDIO_BAR;
-			UI_DisplayAudioBar();
+			//UI_DisplayAudioBar();
 		}
 
 	}
@@ -699,7 +767,8 @@ static const vertical_dashed_t mr_vlines[] = {
 	{
 		// VFO-режим — две строки
 		//GUI_DisplaySmallest("VFO MODE",     1, 2, false, true);   // X=15, Y=10
-		GUI_DisplaySmallestDark("VFO MODE",     2, 2, false, true); 
+		GUI_DisplaySmallestDark("VFO",     1, 2, false, true); 
+		GUI_DisplaySmallestDark("MODE",     20, 2, false, true); 
 		GUI_DisplaySmallest	   ("FREQUENCY",  90, 2, false, true);   // X=22, Y=18
 		GUI_DisplaySmallestDark("SQL",  6, 40, false, false);
 		GUI_DisplaySmallestDark("BAND", 28, 40, false, false);
@@ -719,7 +788,8 @@ static const vertical_dashed_t mr_vlines[] = {
 		GUI_DisplaySmallestDark("B", 70, 2, false, false);
 	}*/
 
-		
+		// АУДИОБАР — рисуем ПОСЛЕДНИМ, чтобы был поверх всех надписей
+	UI_DisplayAudioBar();
 
 	ST7565_BlitFullScreen();
 }

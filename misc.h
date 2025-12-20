@@ -259,7 +259,7 @@ extern int16_t               gCurrentRSSI;   // now one per VFO
 extern uint8_t               gIsLocked;
 extern volatile uint8_t      boot_counter_10ms;
 
-extern bool gBacklightAlwaysOn;
+extern bool gBacklightAlwaysOn;//подсветка всегда
 extern bool backlightOn;  // ← добавь эту строку//************ПОДСВЕТКА F8*********** */
 extern uint8_t gSavedBacklightLevel;  // сохранённая яркость перед F+8
 

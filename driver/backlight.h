@@ -25,7 +25,6 @@
 
 extern uint16_t gBacklightCountdown;
 extern uint8_t gBacklightBrightness;
-extern bool gBacklightAlwaysOn;
 
 #ifdef ENABLE_BLMIN_TMP_OFF
 typedef enum {

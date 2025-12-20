@@ -38,7 +38,8 @@ SYSTEM_DelayMs(20);
 gKeyReading0 = Keys[0];
 gKeyReading1 = Keys[0];
 gDebounceCounter = 2;
-if (Keys[0] == KEY_SIDE1) return BOOT_MODE_F_LOCK;
+//if (Keys[0] == KEY_SIDE1) return BOOT_MODE_F_LOCK;
+if (Keys[0] == KEY_0) return BOOT_MODE_F_LOCK; //hidden menu key
 return BOOT_MODE_NORMAL;
 }
 
