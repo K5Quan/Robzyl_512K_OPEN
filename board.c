@@ -45,6 +45,7 @@
 #endif
 #include "ui/menu.h"
 #include "ARMCM0.h"
+#include "app/spectrum.h"
 
 //#include "debugging.h"
 
@@ -686,27 +687,39 @@ static const uint32_t gDefaultFrequencyTable[] =
 	43350000     //
 };
 
-void BOARD_FactoryReset()
+void BOARD_FactoryReset(int32_t gSubMenuSelection)
 {
 	uint16_t i;
 	uint8_t  Template[8];
 	memset(Template, 0xFF, sizeof(Template));
-	//Don't erase Calibration
-	for (i = 0x0000; i < 0x1E00; i += 8) EEPROM_WriteBuffer(i, Template);
+    
+	if (gSubMenuSelection) { //Erase ALL but calibration
+	
+		for (i = 0x0000; i < 0x1E00; i += 8) EEPROM_WriteBuffer(i, Template);
+		#ifdef ENABLE_EEPROM_512K
+			for (i = ADRESS_FREQ_PARAMS; i < ADRESS_HISTORY; i += 8) EEPROM_WriteBuffer(i, Template);
+		#endif
+	}
+	else { //Erase ALL but calibration and memories
+		for (i = 0x0C80; i < 0xD5F; i += 8) EEPROM_WriteBuffer(i, Template);
+		for (i = 0x0E28; i < 0xF4F; i += 8) EEPROM_WriteBuffer(i, Template);
+		for (i = 0x1BD0; i < 0x1DFF; i += 8) EEPROM_WriteBuffer(i, Template);
 #ifdef ENABLE_EEPROM_512K
-	for (i = ADRESS_FREQ_PARAMS; i < ADRESS_HISTORY; i += 8) EEPROM_WriteBuffer(i, Template);
+		for (i = ADRESS_HISTORY; i < ADRESS_HISTORY + 100 * 6; i += 8) EEPROM_WriteBuffer(i, Template); //sizeof(HistoryStruct) = 6
 #endif
+	}
 
-		RADIO_InitInfo(gTxVfo, FREQ_CHANNEL_FIRST + BAND6_400MHz, 44600625);
-		gEeprom.RX_OFFSET = 0;
-		SETTINGS_SaveSettings();
-		// set the first few memory channels
-		for (i = 0; i < ARRAY_SIZE(gDefaultFrequencyTable); i++)
-		{
-			const uint32_t Frequency   = gDefaultFrequencyTable[i];
-			gTxVfo->freq_config_RX.Frequency = Frequency;
-			gTxVfo->freq_config_TX.Frequency = Frequency;
-			gTxVfo->Band               = FREQUENCY_GetBand(Frequency);
-			SETTINGS_SaveChannel(FREQ_CHANNEL_FIRST + i, 0, 2);
-		}
+	RADIO_InitInfo(gTxVfo, FREQ_CHANNEL_FIRST + BAND6_400MHz, 44600625);
+	gEeprom.RX_OFFSET = 0;
+	SETTINGS_SaveSettings();
+	// set the first few memory channels
+	for (i = 0; i < ARRAY_SIZE(gDefaultFrequencyTable); i++)
+	{
+		const uint32_t Frequency   = gDefaultFrequencyTable[i];
+		gTxVfo->freq_config_RX.Frequency = Frequency;
+		gTxVfo->freq_config_TX.Frequency = Frequency;
+		gTxVfo->Band               = FREQUENCY_GetBand(Frequency);
+		SETTINGS_SaveChannel(FREQ_CHANNEL_FIRST + i, 0, 2);
+	}
+	ClearSettings();
 }

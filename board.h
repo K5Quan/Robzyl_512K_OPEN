@@ -32,7 +32,7 @@ void     BOARD_Init(void);
 void     BOARD_EEPROM_Init(void);
 void     BOARD_EEPROM_LoadCalibration(void);
 uint32_t BOARD_fetchChannelFrequency(uint16_t Channel);
-void     BOARD_FactoryReset();
+void     BOARD_FactoryReset(int32_t gSubMenuSelection);
 
 void     BOARD_gMR_LoadChannels();
 uint16_t BOARD_gMR_fetchChannel(const uint32_t freq);

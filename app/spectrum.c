@@ -52,7 +52,7 @@ static volatile bool gSpectrumChangeRequested = false;
 static volatile uint8_t gRequestedSpectrumState = 0;
 
 
-#define HISTORY_SIZE 30
+#define HISTORY_SIZE 100
 
 static uint32_t    HFreqs[HISTORY_SIZE];
 static uint8_t     HCount[HISTORY_SIZE];
@@ -62,60 +62,59 @@ static bool gHistoryScan = false; // Indicateur de scan de l'historique
 /////////////////////////////Parameters://///////////////////////////
 //SEE parametersSelectedIndex
 // see GetParametersText
-uint8_t DelayRssi = 4;                // case 0       
-uint16_t SpectrumDelay = 0;           // case 1      
-uint16_t MaxListenTime = 0;           // case 2
-uint8_t PttEmission = 0;              // case 3      
-uint32_t gScanRangeStart = 1400000;   // case 4      
-uint32_t gScanRangeStop = 13000000;   // case 5      
+static uint8_t DelayRssi = 4;                // case 0       
+static uint16_t SpectrumDelay = 0;           // case 1      
+static uint16_t MaxListenTime = 0;           // case 2
+static uint8_t PttEmission = 0;              // case 3      
+static uint32_t gScanRangeStart = 1400000;   // case 4      
+static uint32_t gScanRangeStop = 13000000;   // case 5      
 //Step                                // case 6      
 //ListenBW                            // case 7      
 //Modulation                          // case 8      
 //ClearSettings                       // case 9      
-bool Backlight_On_Rx = 0;             // case 10        
+static bool Backlight_On_Rx = 0;             // case 10        
 static bool gCounthistory = 1;        // case 11      
 //ClearHistory                        // case 12      
 //RAM                                 // case 13     
-uint16_t SpectrumSleepMs = 0;         // case 14
-uint8_t Noislvl_OFF = 60;             // case 15
-uint8_t Noislvl_ON = 50;
-uint16_t osdPopupSetting = 1000;      // case 16
-uint16_t UOO_trigger = 15;            // case 17
+static uint16_t SpectrumSleepMs = 0;         // case 14
+static uint8_t Noislvl_OFF = 60;             // case 15
+static uint8_t Noislvl_ON = 50;
+static uint16_t osdPopupSetting = 500;      // case 16
+static uint16_t UOO_trigger = 15;            // case 17
 
 
 #define PARAMETER_COUNT 18
 ////////////////////////////////////////////////////////////////////
-uint16_t osdPopupTimer = 1000;
+static uint16_t osdPopupTimer = 1000;
 static uint32_t Fmax = 0;
-uint32_t spectrumElapsedCount = 0;
-uint32_t SpectrumPauseCount = 0;
-bool SPECTRUM_PAUSED;
-uint8_t IndexMaxLT = 0;
+static uint32_t spectrumElapsedCount = 0;
+static uint32_t SpectrumPauseCount = 0;
+static bool SPECTRUM_PAUSED;
+static uint8_t IndexMaxLT = 0;
 static const char *labels[] = {"OFF","2s","5s","10s","30s", "1m", "5m", "10m", "20m", "30m"};
-const uint16_t listenSteps[] = {0, 2, 5, 10, 30, 60, 300, 600, 1200, 1800}; //in s
+static const uint16_t listenSteps[] = {0, 2, 5, 10, 30, 60, 300, 600, 1200, 1800}; //in s
 #define LISTEN_STEP_COUNT 9
 
-uint8_t IndexPS = 0;
+static uint8_t IndexPS = 0;
 static const char *labelsPS[] = {"OFF","100ms","500ms", "1s", "2s", "5s"};
-const uint16_t PS_Steps[] = {0, 10, 50, 100, 200, 500}; //in 10 ms
+static const uint16_t PS_Steps[] = {0, 10, 50, 100, 200, 500}; //in 10 ms
 #define PS_STEP_COUNT 5
 
 
 static uint32_t lastReceivingFreq = 0;
-bool gIsPeak = false;
-bool historyListActive = false;
-bool gForceModulation = 0;
-bool classic = 1;
-uint8_t SlIndex = 0;
-uint8_t SpectrumMonitor = 0;
-uint8_t prevSpectrumMonitor = 0;
-bool Key_1_pressed = 0;
-uint16_t WaitSpectrum = 0; 
-uint32_t Last_Tuned_Freq = 44610000;
+static bool gIsPeak = false;
+static bool historyListActive = false;
+static bool gForceModulation = 0;
+static bool classic = 1;
+static uint8_t SpectrumMonitor = 0;
+static uint8_t prevSpectrumMonitor = 0;
+static bool Key_1_pressed = 0;
+static uint16_t WaitSpectrum = 0; 
+static uint32_t Last_Tuned_Freq = 44610000;
 #define SQUELCH_OFF_DELAY 10;
-bool StorePtt_Toggle_Mode = 0;
+static bool StorePtt_Toggle_Mode = 0;
 static uint8_t historyListIndex = 0;
-uint8_t ArrowLine = 1;
+static uint8_t ArrowLine = 1;
 static int historyScrollOffset = 0;
 static void LoadValidMemoryChannels(void);
 static void ToggleRX(bool on);
@@ -128,64 +127,54 @@ static void UpdateScan();
 static uint8_t bandListSelectedIndex = 0;
 static int bandListScrollOffset = 0;
 static void RenderBandSelect();
-static void ClearSettings();
 static void ClearHistory();
-void DrawMeter(int);
-uint8_t scanListSelectedIndex = 0;
-uint8_t scanListScrollOffset = 0;
-uint8_t parametersSelectedIndex = 0;
-uint8_t parametersScrollOffset = 0;
+static void DrawMeter(int);
+static uint8_t scanListSelectedIndex = 0;
+static uint8_t scanListScrollOffset = 0;
+static uint8_t parametersSelectedIndex = 0;
+static uint8_t parametersScrollOffset = 0;
 static uint8_t validScanListCount = 0;
-bool inScanListMenu = false;
-KeyboardState kbd = {KEY_INVALID, KEY_INVALID, 0,0};
+static KeyboardState kbd = {KEY_INVALID, KEY_INVALID, 0,0};
 struct FrequencyBandInfo {
     uint32_t lower;
     uint32_t upper;
     uint32_t middle;
 };
-bool isBlacklistApplied;
-uint32_t cdcssFreq;
-uint16_t ctcssFreq;
-uint8_t refresh = 0;
+static bool isBlacklistApplied;
+static uint32_t cdcssFreq;
+static uint16_t ctcssFreq;
+static uint8_t refresh = 0;
 #define F_MAX frequencyBandTable[ARRAY_SIZE(frequencyBandTable) - 1].upper
 #define Bottom_print 51 //Robby69
-Mode appMode;
+static Mode appMode;
 #define UHF_NOISE_FLOOR 5
-uint16_t scanChannel[MR_CHANNEL_LAST + 3];
-uint8_t ScanListNumber[MR_CHANNEL_LAST + 3];
-uint16_t scanChannelsCount;
-void ToggleScanList();
+static uint16_t scanChannel[MR_CHANNEL_LAST + 3];
+static uint8_t ScanListNumber[MR_CHANNEL_LAST + 3];
+static uint16_t scanChannelsCount;
+static void ToggleScanList();
 static void LoadSettings();
 static void SaveSettings();
-const uint16_t RSSI_MAX_VALUE = 255;
+static const uint16_t RSSI_MAX_VALUE = 255;
 static uint16_t R30, R37, R3D, R43, R47, R48, R7E, R02, R3F;
 static char String[100];
 static char StringC[10];
-bool isKnownChannel = false;
-uint16_t  gChannel;
-uint16_t  latestChannel;
-char channelName[12];
-//NO NAMES char rxChannelName[12];
+static bool isKnownChannel = false;
+static uint16_t  gChannel;
+static char channelName[12];
 ModulationMode_t  channelModulation;
-BK4819_FilterBandwidth_t channelBandwidth;
-bool isInitialized = false;
-bool isListening = true;
-bool newScanStart = true;
-bool audioState = true;
-uint8_t bl;
-uint8_t CurrentScanBand = 1;
-State currentState = SPECTRUM, previousState = SPECTRUM;
-uint8_t Spectrum_state; 
+static BK4819_FilterBandwidth_t channelBandwidth;
+static bool isInitialized = false;
+static bool isListening = true;
+static bool newScanStart = true;
+static bool audioState = true;
+static uint8_t bl;
+static State currentState = SPECTRUM, previousState = SPECTRUM;
+static uint8_t Spectrum_state; 
 static PeakInfo peak;
-ScanInfo scanInfo;
-char     latestScanListName[12];
-const char *bwOptions[] = {"  25k", "12.5k", "6.25k"};
-const char *scanListOptions[] = {"SL1", "SL2", "SL3", "SL4", "SL5", "SL6", 
-  "SL7", "SL8", "SL9", "SL10", "SL11", "SL12", "SL13", "SL14", "SL15", "ALL"};
-const uint8_t modulationTypeTuneSteps[] = {100, 50, 10};
-const uint8_t modTypeReg47Values[] = {1, 7, 5};
-uint8_t BPRssiTriggerLevelUp[32]={0};
-uint8_t SLRssiTriggerLevelUp[15]={0};
+static ScanInfo scanInfo;
+static char     latestScanListName[12];
+static uint8_t BPRssiTriggerLevelUp[32]={0};
+static uint8_t SLRssiTriggerLevelUp[15]={0};
 // Deklaracja funkcji pomocniczej
 static bool IsBlacklisted(uint32_t f);
 
@@ -203,16 +192,17 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
                              bandEnabled: {0}
                             };
 
-uint32_t currentFreq, tempFreq;
-uint8_t rssiHistory[128];
-uint8_t indexFs = 0;
-int ShowLines = 3;
-uint8_t freqInputIndex = 0;
-uint8_t freqInputDotIndex = 0;
-KEY_Code_t freqInputArr[10];
+static uint32_t currentFreq, tempFreq;
+static uint8_t rssiHistory[128];
+static uint8_t indexFs = 0;
+static int ShowLines = 3;
+static uint8_t freqInputIndex = 0;
+static uint8_t freqInputDotIndex = 0;
+static KEY_Code_t freqInputArr[10];
 char freqInputString[11];
 static const bandparameters BParams[32];
 static uint8_t nextBandToScanIndex = 0;
+static void LookupChannelModulation();
 
 #ifdef ENABLE_SCANLIST_SHOW_DETAIL
   static uint16_t scanListChannels[MR_CHANNEL_LAST+1]; // Array to store Channel indices for selected scanlist
@@ -226,7 +216,7 @@ static uint8_t nextBandToScanIndex = 0;
 #endif
 
   #define MAX_VALID_SCANLISTS 15
-  static uint8_t validScanListIndices[MAX_VALID_SCANLISTS]; // stocke les index valides
+static uint8_t validScanListIndices[MAX_VALID_SCANLISTS]; // stocke les index valides
 
 
 const RegisterSpec allRegisterSpecs[] = {
@@ -371,7 +361,7 @@ static char StringCode[10] = "";
 static char osdPopupText[32] = "";
 
 // 
-void ShowOSDPopup(const char *str)
+static void ShowOSDPopup(const char *str)
 {   osdPopupTimer = osdPopupSetting;
     strncpy(osdPopupText, str, sizeof(osdPopupText)-1);
     osdPopupText[sizeof(osdPopupText)-1] = '\0';  // Zabezpieczenie przed przepełnieniem
@@ -414,7 +404,7 @@ static int clamp(int v, int min, int max) {
   return v <= min ? min : (v >= max ? max : v);
 }
 
-void SetState(State state) {
+static void SetState(State state) {
   previousState = currentState;
   currentState = state;
   
@@ -496,9 +486,9 @@ static void ResetInterrupts()
 }
 
 // scan step in 0.01khz
-uint32_t GetScanStep() { return scanStepValues[settings.scanStepIndex]; }
+static uint32_t GetScanStep() { return scanStepValues[settings.scanStepIndex]; }
 
-uint16_t GetStepsCount() 
+static uint16_t GetStepsCount() 
 { 
   if (appMode==CHANNEL_MODE)
   {
@@ -512,9 +502,9 @@ uint16_t GetStepsCount()
   return 128 >> settings.stepsCount;
 }
 
-uint32_t GetBW() { return GetStepsCount() * GetScanStep(); }
+static uint32_t GetBW() { return GetStepsCount() * GetScanStep(); }
 
-uint16_t GetRandomChannelFromRSSI(uint16_t maxChannels) {
+static uint16_t GetRandomChannelFromRSSI(uint16_t maxChannels) {
   uint32_t rssi = rssiHistory[1]*rssiHistory[maxChannels/2];
   if (maxChannels == 0 || rssi == 0) {
         return 1;  // Fallback to chanel 1 if invalid input
@@ -548,7 +538,7 @@ static void DeInitSpectrum(bool ComeBack) {
 
 /////////////////////////////EEPROM://///////////////////////////
 
-void TrimTrailingChars(char *str) {
+static void TrimTrailingChars(char *str) {
     int len = strlen(str);
     while (len > 0) {
         unsigned char c = str[len - 1];
@@ -561,7 +551,7 @@ void TrimTrailingChars(char *str) {
 }
 
 
-void ReadChannelName(uint16_t Channel, char *name) {
+static void ReadChannelName(uint16_t Channel, char *name) {
     EEPROM_ReadBuffer(ADRESS_NAMES + Channel * 16, (uint8_t *)name, 12);
     TrimTrailingChars(name);
 }
@@ -796,19 +786,11 @@ if (historyListActive == true){
     isInitialized = false;
 }
 
-uint8_t GetScanStepFromStepFrequency(uint16_t stepFrequency) 
-{
-	for(uint8_t i = 0; i < ARRAY_SIZE(scanStepValues); i++)
-		if(scanStepValues[i] == stepFrequency)
-			return i;
-	return S_STEP_25_0kHz;
-}
-
-uint8_t GetBWRegValueForScan() {
+static uint8_t GetBWRegValueForScan() {
   return scanStepBWRegValues[settings.scanStepIndex];
 }
 
-uint16_t GetRssi(void) {
+static uint16_t GetRssi(void) {
     uint16_t rssi;
     //BK4819_ReadRegister(0x63);
     if (isListening) SYSTICK_DelayUs(12000); 
@@ -914,19 +896,6 @@ static void ResetScanStats() {
   scanInfo.rssiMax = scanInfo.rssiMin + 20 ; 
 }
 
-
-bool SingleBandCheck(void) {
-    int count = 0;
-    for (int i = 0; i < 32; i++) {
-        if (settings.bandEnabled[i]) {
-            if (++count > 1) {
-                return false;
-            }
-        }
-    }
-    return (count == 1);
-}
-
 static bool InitScan() {
     ResetScanStats();
     scanInfo.i = 0;
@@ -982,11 +951,11 @@ static void RelaunchScan() {
     gIsPeak = false;
 }
 
-void UpdateNoiseOff(){
+static void UpdateNoiseOff(){
   if( BK4819_GetExNoiseIndicator() > Noislvl_OFF) {gIsPeak = false;ToggleRX(false);}		
 }
 
-void UpdateNoiseOn(){
+static void UpdateNoiseOn(){
 	if( BK4819_GetExNoiseIndicator() < Noislvl_ON) {gIsPeak = true;ToggleRX(true);}
 }
 
@@ -1247,7 +1216,7 @@ static void Blacklist() {
 // Draw things
 
 // applied x2 to prevent initial rounding
-uint16_t Rssi2PX(uint16_t rssi, uint16_t pxMin, uint16_t pxMax) {
+static uint16_t Rssi2PX(uint16_t rssi, uint16_t pxMin, uint16_t pxMax) {
   const int16_t DB_MIN = settings.dbMin << 1;
   const int16_t DB_MAX = settings.dbMax << 1;
   const int16_t DB_RANGE = DB_MAX - DB_MIN;
@@ -1256,7 +1225,7 @@ uint16_t Rssi2PX(uint16_t rssi, uint16_t pxMin, uint16_t pxMax) {
   return ((dbm - DB_MIN) * PX_RANGE + DB_RANGE / 2) / DB_RANGE + pxMin;
 }
 
-int16_t Rssi2Y(uint16_t rssi) {
+static int16_t Rssi2Y(uint16_t rssi) {
   int delta = ArrowLine*8;
   return DrawingEndY + delta -Rssi2PX(rssi, delta, DrawingEndY);
 }
@@ -1270,7 +1239,7 @@ static void DrawSpectrum()
     }
 }
 
-void RemoveTrailZeros(char *s) {
+static void RemoveTrailZeros(char *s) {
     char *p = s; 
     while (*p) p++;               // aller à la fin
     while (p > s && *--p == '0') *p = 0;  // retire zéros inutiles
@@ -1561,13 +1530,13 @@ static void DrawF(uint32_t f) {
       
 }
 
-void LookupChannelInfo() {
+static void LookupChannelInfo() {
     gChannel = BOARD_gMR_fetchChannel(peak.f);
     isKnownChannel = gChannel == 0xFFFF ? false : true;
     if (isKnownChannel){LookupChannelModulation();}
   }
 
-void LookupChannelModulation() {
+static void LookupChannelModulation() {
 	  uint8_t tmp;
 		uint8_t data[8];
 
@@ -1594,9 +1563,6 @@ void LookupChannelModulation() {
 
 
 static void DrawNums() {
-
-
-
   if (appMode==CHANNEL_MODE) 
   {
     sprintf(String, "M:%d", scanChannel[0]+1);
@@ -1620,7 +1586,7 @@ static void DrawNums() {
   
 }
 
-void nextFrequency833() {
+static void nextFrequency833() {
     if (scanInfo.i % 3 != 1) {
         scanInfo.f += 833;
     } else {
@@ -1998,8 +1964,8 @@ static void OnKeyDown(uint8_t key) {
                       break;
                   case 16: //osdPopupSetting
                       osdPopupSetting = isKey3 ? 
-                                 (osdPopupSetting >= 10000 ? 0 : osdPopupSetting + 1000) :
-                                 (osdPopupSetting <= 0 ? 10000 : osdPopupSetting - 1000);
+                                 (osdPopupSetting >= 5000 ? 0 : osdPopupSetting + 500) :
+                                 (osdPopupSetting <= 0 ? 5000 : osdPopupSetting - 500);
                       break;
                   case 17: // UOO_trigger
                       UOO_trigger = isKey3 ? 
@@ -2334,7 +2300,7 @@ static void OnKeyDownFreqInput(uint8_t key) {
   }
 }
 
-void OnKeyDownStill(KEY_Code_t key) {
+static void OnKeyDownStill(KEY_Code_t key) {
   BACKLIGHT_TurnOn();
   switch (key) {
       case KEY_3:
@@ -2433,7 +2399,7 @@ static void RenderSpectrum() {
     }
 }
 
-void DrawMeter(int line) {
+static void DrawMeter(int line) {
   const uint8_t METER_PAD_LEFT = 3;
   settings.dbMax = 30; 
   settings.dbMin = -100;
@@ -2542,7 +2508,7 @@ static void Render() {
   ST7565_BlitFullScreen();
 }
 
-void HandleUserInput(void) {
+static void HandleUserInput(void) {
     kbd.prev = kbd.current;
     kbd.current = GetKey();
     // ---- Anti-rebond + répétition ----
@@ -2824,7 +2790,7 @@ void APP_RunSpectrum(uint8_t Spectrum_state)
     } 
 }
 
-void LoadValidMemoryChannels(void)
+static void LoadValidMemoryChannels(void)
   {
     memset(scanChannel,0,sizeof(scanChannel));
     scanChannelsCount = 0;
@@ -2867,7 +2833,7 @@ void LoadValidMemoryChannels(void)
     }
   }
 
-  void ToggleScanList(int scanListNumber, int single )
+static void ToggleScanList(int scanListNumber, int single )
   {
     if (appMode == SCAN_BAND_MODE)
       {
@@ -3054,7 +3020,7 @@ static void ClearHistory()
   SaveSettings(); 
 }
 
-static void ClearSettings() 
+void ClearSettings() 
 {
   for (int i = 1; i < 15; i++) {
     settings.scanListEnabled[i] = 0;
@@ -3077,7 +3043,7 @@ static void ClearSettings()
   Noislvl_OFF = 60; 
   Noislvl_ON = 50;  
   UOO_trigger = 15;
-  osdPopupSetting = 1000;
+  osdPopupSetting = 500;
   for (int i = 0; i < 32; i++) { 
       BPRssiTriggerLevelUp[i] = 5;
       settings.bandEnabled[i] = 0;
@@ -3228,9 +3194,18 @@ static void GetParametersText(uint8_t index, char *buffer) {
             sprintf(buffer, "Noislvl_OFF: %d", Noislvl_OFF);
             break;
         case 16:
-            if (osdPopupSetting)
-                sprintf(buffer, "POPUPS: %ds", osdPopupSetting / 1000);
-            else sprintf(buffer, "NO POPUPS");
+            if (osdPopupSetting) {
+                uint8_t seconds = osdPopupSetting / 1000;
+                uint8_t decimals = (osdPopupSetting % 1000) / 100;
+
+                if (decimals) {
+                    sprintf(buffer, "POPUPS: %d.%ds", seconds, decimals);
+                } else {
+                    sprintf(buffer, "POPUPS: %ds", seconds);
+                }
+            } else {
+                sprintf(buffer, "NO POPUPS");
+            }
             break;
         
             break;
@@ -3246,7 +3221,7 @@ static void GetParametersText(uint8_t index, char *buffer) {
     }
 }
 
- static void GetBandItemText(uint8_t index, char* buffer) {
+static void GetBandItemText(uint8_t index, char* buffer) {
     
     sprintf(buffer, "%d:%-12s%s", 
             index + 1, 

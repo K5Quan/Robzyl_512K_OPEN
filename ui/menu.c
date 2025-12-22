@@ -54,10 +54,6 @@ const t_menu_item MenuList[] =
 	{"BackLt",  MENU_ABR           },
 	{"BLMin",   MENU_ABR_MIN       },
 	{"BLMax",   MENU_ABR_MAX       },
-	{"F1Shrt",  MENU_F1SHRT        },
-	{"F1Long",  MENU_F1LONG        },
-	{"F2Shrt",  MENU_F2SHRT        },
-	{"F2Long",  MENU_F2LONG        },
 	{"BltTRX",  MENU_ABR_ON_TX_RX  },
 	{"SqTone",  MENU_SQL_TONE      },
 	{"RxDCS",   MENU_R_DCS         },
@@ -71,8 +67,10 @@ const t_menu_item MenuList[] =
 	{"ChSave",  MENU_MEM_CH        },
 	// hidden menu items from here on
 	// enabled if pressing upper side button at power-on
-	{"Reset",   MENU_RESET         },
-	{"F Lock",  MENU_F_LOCK        },
+	{"F1Shrt",  MENU_F1SHRT        },
+	{"F1Long",  MENU_F1LONG        },
+	{"F2Shrt",  MENU_F2SHRT        },
+	{"F2Long",  MENU_F2LONG        },
 	{"BatCal",  MENU_BATCAL        },
 	{"BatTyp",  MENU_BATTYP        },
 	{"TxPwr",   MENU_TXP           },
@@ -83,6 +81,8 @@ const t_menu_item MenuList[] =
 	{"BatTxt",  MENU_BAT_TXT       },	
 	{"ChDele",  MENU_DEL_CH        },
 	{"ChName",  MENU_MEM_NAME      },	
+	{"Reset",   MENU_RESET         },
+	{"F Lock",  MENU_F_LOCK        },
 	{"",        0xff               }  // end of list - DO NOT delete or move this
 };
 
@@ -93,7 +93,7 @@ const int CHANNEL_ONLY_SETTINGS[] = {
 	MENU_MEM_NAME,
 };
 
-const uint8_t FIRST_HIDDEN_MENU_ITEM = MENU_RESET;
+const uint8_t FIRST_HIDDEN_MENU_ITEM = MENU_F1SHRT;
 
 const char gSubMenu_TXP[][5] =
 {
@@ -157,8 +157,9 @@ const char gSubMenu_ROGER[][7] =
 	"R2D2-2"
 };
 
-const char gSubMenu_RESET[][4] =
+const char gSubMenu_RESET[][9] =
 {
+	"KEEP CH",
 	"ALL"
 };
 

@@ -39,10 +39,7 @@
 #include <stdint.h>
 #include <string.h>
 
-extern uint32_t          	 gScanRangeStart;
-extern uint32_t         	 gScanRangeStop;
 static const uint8_t DrawingEndY = 50;
-
 static const uint8_t U8RssiMap[] = {
     121, 115, 109, 103, 97, 91, 85, 79, 73, 63,
 };
@@ -192,8 +189,9 @@ typedef struct PeakInfo {
 } PeakInfo;
 
 void APP_RunSpectrum(uint8_t Spectrum_state);
-void LookupChannelInfo();
-void LookupChannelModulation();
+//void LookupChannelInfo();
+//void LookupChannelModulation();
+void ClearSettings(void);
 
 
 #endif 
