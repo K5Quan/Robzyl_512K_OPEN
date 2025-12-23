@@ -19,6 +19,9 @@
 
 #ifndef APP_MAIN_H
 #define APP_MAIN_H
+extern uint32_t txTimeSeconds;  // время передачи в секундах
+extern uint32_t rxTimeSeconds;  // время приёма в секундах
+extern bool isTxActive;         // флаг: идёт ли передача сейчас
 
 #include "driver/keyboard.h"
 

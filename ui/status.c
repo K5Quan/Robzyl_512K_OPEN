@@ -1,7 +1,7 @@
 /* Original work Copyright 2023 Dual Tachyon
  * https://github.com/DualTachyon
  *
- * Modified work Copyright 2024 kamilsss655
+ * Modified work 2024 kamilsss655
  * https://github.com/kamilsss655
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>  // для sprintf
 
 #include "app/fm.h"
 #include "app/scanner.h"
@@ -33,9 +34,13 @@
 #include "ui/helper.h"
 #include "ui/ui.h"
 #include "ui/status.h"
+#include "app/main.h"  // для txTimeSeconds, rxTimeSeconds, isTxActive
 
 void UI_DisplayStatus()
 {
+	char time_str[6];
+	const uint8_t TIME_POS_X = 20;  // редактируемая позиция времени (X в пикселях, можно менять)
+
 	memset(gStatusLine, 0, sizeof(gStatusLine));
 
 	// === ОТДЕЛЬНЫЕ ПОЗИЦИИ ДЛЯ КАЖДОГО ИНДИКАТОРА ===
@@ -64,6 +69,12 @@ void UI_DisplayStatus()
 		gStatusLine[POS_TX + 9] |= 0x49;
 		gStatusLine[POS_TX + 10] |= 0x5D;
 		gStatusLine[POS_TX + 11] |= 0x7F;
+
+		// Время TX — тем же шрифтом, что и батарея
+		sprintf(time_str, "%02u:%02u", txTimeSeconds / 60, txTimeSeconds % 60);
+		UI_PrintStringSmallBuffer(time_str, gStatusLine + TIME_POS_X);
+
+		txTimeSeconds++;  // инкремент каждые 500 мс
 	}
 
 	// === Индикатор приёма "RX" (двойной) ===
@@ -86,6 +97,12 @@ void UI_DisplayStatus()
 		gStatusLine[POS_RX + 9] |= 0x49;
 		gStatusLine[POS_RX + 10] |= 0x5D;
 		gStatusLine[POS_RX + 11] |= 0x7F;
+
+		// Время RX — тем же шрифтом, что и батарея
+		sprintf(time_str, "%02u:%02u", rxTimeSeconds / 60, rxTimeSeconds % 60);
+		UI_PrintStringSmallBuffer(time_str, gStatusLine + TIME_POS_X);
+
+		rxTimeSeconds++;
 	}
 
 	// === Индикатор Power Save "PS" (двойной, расстояние уменьшено на 1 пиксель) ===

@@ -41,6 +41,13 @@
 
 bool gBacklightAlwaysOn = false;
 
+// Добавлено только это — время TX/RX
+uint32_t txTimeSeconds = 0;
+uint32_t rxTimeSeconds = 0;
+bool isTxActive = false;
+// Добавь эти две строки:
+static uint8_t lastRadioState = 255;  // для отслеживания смены режима
+
 static void MAIN_Key_STAR(bool closecall)
 {
 	if (gCurrentFunction == FUNCTION_TRANSMIT) return;
@@ -486,9 +493,33 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
 		case KEY_PTT:
 			GENERIC_Key_PTT(bKeyPressed);
+
+			// === СБРОС ТАЙМЕРА TX КАЖДЫЙ РАЗ ПРИ НАЖАТИИ PTT ===
+			if (bKeyPressed) {
+				txTimeSeconds = 0;  // сбрасываем при каждом нажатии (начало новой передачи)
+			}
+			isTxActive = bKeyPressed;
+
+			// === СБРОС ТАЙМЕРА RX ПРИ ОТПУСКАНИИ PTT (начало приёма) ===
+			if (!bKeyPressed && isTxActive) {
+				rxTimeSeconds = 0;  // сбрасываем RX при переходе в приём
+			}
 			break;
 
 		default:
 			break;
+			
 	}
+// === ДОБАВЬ ЭТОТ БЛОК В КОНЕЦ ФУНКЦИИ ===
+    // Отслеживаем реальное состояние радиостанции (TX / RX)
+    if (gCurrentFunction != lastRadioState) {
+        if (gCurrentFunction == FUNCTION_TRANSMIT) {
+            txTimeSeconds = 0;  // новая передача
+        }
+        if (gCurrentFunction == FUNCTION_RECEIVE) {
+            rxTimeSeconds = 0;  // новый приём (шумоподавитель открылся)
+        }
+        lastRadioState = gCurrentFunction;
+    }
+    // === КОНЕЦ ДОБАВЛЕННОГО БЛОКА ===
 }
