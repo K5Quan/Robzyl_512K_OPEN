@@ -865,12 +865,12 @@ static void ToggleRX(bool on) {
     if (on && isKnownChannel) {
         if(!gForceModulation) settings.modulationType = channelModulation;
         //NO NAMES memmove(rxChannelName, channelName, sizeof(rxChannelName));
-        BK4819_InitAGC(settings.modulationType);
+        BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
         
     }
     else if(on && appMode == SCAN_BAND_MODE) {
             if (!gForceModulation) settings.modulationType = BParams[bl].modulationType;
-            BK4819_InitAGC(settings.modulationType);
+            BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
           }
     
     if (on) { 
@@ -883,7 +883,7 @@ static void ToggleRX(bool on) {
         if(appMode!=CHANNEL_MODE) BK4819_WriteRegister(0x43, GetBWRegValueForScan());
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
         RADIO_SetModulation(MODULATION_FM);
-        BK4819_InitAGC(MODULATION_FM);
+        BK4819_InitAGC(gEeprom.RX_AGC, MODULATION_FM);
     }
 
     ToggleAudio(on);
@@ -1092,7 +1092,7 @@ static void ToggleModulation() {
     settings.modulationType = MODULATION_FM;
   }
   RADIO_SetModulation(settings.modulationType);
-  BK4819_InitAGC(settings.modulationType);
+  BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
   gForceModulation = 1;
 }
 

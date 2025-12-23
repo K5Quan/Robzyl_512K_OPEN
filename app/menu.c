@@ -171,6 +171,7 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
 			*pMin = 0;
 			*pMax = 15;
 			break;
+		
 		case MENU_SCREN:
 			*pMin = 0;
 			*pMax = ARRAY_SIZE(gSubMenu_OFF_ON) - 1;
@@ -179,6 +180,11 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
 		case MENU_AM:
 			*pMin = 0;
 			*pMax = ARRAY_SIZE(gModulationStr) - 1;
+			break;
+		
+		case MENU_RX_AGC:
+			*pMin = 0;
+			*pMax = ARRAY_SIZE(gSubMenu_RX_AGC) - 1;
 			break;
 
 		case MENU_SCR:
@@ -474,6 +480,12 @@ void MENU_AcceptSetting(void)
 			gTxVfo->Modulation     = gSubMenuSelection;
 			gRequestSaveChannel = 1;
 			return;
+			
+		case MENU_RX_AGC:
+			gEeprom.RX_AGC    = gSubMenuSelection;
+			gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
+			gFlagResetVfos    = true;
+			break;
 
 		case MENU_SQL_TONE:
 			gEeprom.SQL_TONE = gSubMenuSelection;

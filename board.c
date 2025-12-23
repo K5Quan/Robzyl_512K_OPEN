@@ -560,6 +560,7 @@ void BOARD_EEPROM_Init(void)
 	// 0F40..0F47
 	EEPROM_ReadBuffer(0x0F40, Data, 8);
 	gSetting_F_LOCK            = (Data[0] < F_LOCK_LEN) ? Data[0] : F_UNLOCK_PMR;
+	gEeprom.RX_AGC = (Data[1] < RX_AGC_LEN) ? Data[1] : RX_AGC_SLOW;
 	gSetting_ScrambleEnable    = (Data[6] < 2) ? Data[6] : true;
 	//gSetting_TX_EN             = (Data[7] & (1u << 0)) ? true : false;
 	//gSetting_battery_text      = (((Data[7] >> 2) & 3u) <= 2) ? (Data[7] >> 2) & 3 : 2;

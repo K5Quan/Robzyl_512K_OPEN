@@ -90,7 +90,7 @@ void Main(void)
 	RADIO_SelectVfos();
 	RADIO_SetupRegisters(true);
 
-	BK4819_InitAGC(gTxVfo->Modulation);
+	BK4819_InitAGC(gEeprom.RX_AGC, gTxVfo->Modulation);
 	BK4819_SetAGC(1); //Test Kolyan
 
 	for (i = 0; i < ARRAY_SIZE(gBatteryVoltages); i++)

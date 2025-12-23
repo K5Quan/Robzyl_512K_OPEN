@@ -87,6 +87,7 @@ void SETTINGS_SaveSettings(void)
 	EEPROM_WriteBuffer(0x0EA8, State);
 	memset(State, 0xFF, sizeof(State));
 	State[0]  = gSetting_F_LOCK;
+	State[1] = gEeprom.RX_AGC;
 	State[6]  = gSetting_ScrambleEnable;
 	State[7] = (State[7] & ~(3u << 2)) | ((gSetting_battery_text & 3u) << 2);
 	State[7] = (State[7] & ~(3u << 6)) | ((gSetting_backlight_on_tx_rx & 3u) << 6);

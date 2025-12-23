@@ -275,18 +275,38 @@ void BK4819_SetAGC(bool enable)
 	//         0 = -33dB
 	//
 
-void BK4819_InitAGC(ModulationMode_t modulation)
+void BK4819_InitAGC(const uint8_t agcType, ModulationMode_t modulation)
 {
 	
 	if(modulation==MODULATION_AM)
 	{
 		//AM modulation
-		BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (20 << 0));
+		switch(agcType)
+		{	
+			case RX_AGC_SLOW:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (10 << 0));
+				break;
+			case RX_AGC_FAST:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (20 << 0));
+				break;
+			default:
+				return;
+		}
 	}
 	else
 	{
 		//FM, USB modulation
-		BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (66 << 0));
+				switch(agcType)
+		{	
+			case RX_AGC_SLOW:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (56 << 0));
+				break;
+			case RX_AGC_FAST:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (66 << 0));
+				break;
+			default:
+				return;
+		}
 	}
 		
 	// switched values to ones from 1o11 am_fix:
