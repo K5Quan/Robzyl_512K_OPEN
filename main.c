@@ -89,10 +89,6 @@ void Main(void)
 	RADIO_ConfigureChannel(VFO_CONFIGURE_RELOAD);
 	RADIO_SelectVfos();
 	RADIO_SetupRegisters(true);
-
-	//BK4819_InitAGC(gEeprom.RX_AGC, gTxVfo->Modulation);
-	//BK4819_SetAGC(1); //Test Kolyan
-
 	for (i = 0; i < ARRAY_SIZE(gBatteryVoltages); i++)
 		BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[i]);
 

@@ -275,81 +275,21 @@ void BK4819_SetAGC(bool enable)
 	//         0 = -33dB
 	//
 
-void BK4819_InitAGC(const uint8_t agcType, ModulationMode_t modulation)
+void BK4819_InitAGC(ModulationMode_t modulation)
 {
-	if(modulation==MODULATION_AM)
-	{
-		//AM modulation
-		switch(agcType)
-		{	
-			case RX_AGC_SLOW:
-				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (10 << 0));
-				break;
-			case RX_AGC_FAST:
-				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (20 << 0));
-				break;
-			default:
-				return;
-		}
-
-	}
-	else
-	{
-		//FM, USB modulation
-				switch(agcType)
-		{	
-			case RX_AGC_SLOW:
-				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (56 << 0));
-				break;
-			case RX_AGC_FAST:
-				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (66 << 0));
-				break;
-			default:
-				return;
-		}
-	}
-		
-	// switched values to ones from 1o11 am_fix:
-	BK4819_WriteRegister(BK4819_REG_7B, 0x8420); //Test 4.15
-	BK4819_WriteRegister(BK4819_REG_12, 0x0393);  // 0x037B / 000000 11 011 11 011 / -24dB
-	BK4819_WriteRegister(BK4819_REG_11, 0x01B5);  // 0x027B / 000000 10 011 11 011 / -43dB
-	BK4819_WriteRegister(BK4819_REG_10, 0x0145);  // 0x007A / 000000 00 011 11 010 / -58dB
-	BK4819_WriteRegister(BK4819_REG_14, 0x0019);  // 0x0019 / 000000 00 000 11 001 / -84dB
-	
-	//30, 10 - doesn't overload but sound low
-	//50, 10 - best so far
-	//50, 15, - SOFT - signal doesn't fall too low - works best for now
-	//45, 25 - AGRESSIVE - lower histeresis, but volume jumps heavily, not good for music, might be good for aviation
-	//1 << 14 - way better, seems to open squelch and match squelch as opposed to 0
-	// what is this for? turned off, seems like rssi is increased?
-	// BK4819_WriteRegister(BK4819_REG_7B, 0x8420); 
-  	
-	//from spectrum
-/* 	uint32_t reg = regs_cache[BK4819_REG_47]; //KARINA mod
-  	reg &= ~(1 << 8);
-  	reg |= 1 << 8;
-  	BK4819_WriteRegister(BK4819_REG_47, reg);
-
-	reg &= ~(1 << 9);
-  	reg |= (1 << 9);
-  	BK4819_WriteRegister(BK4819_REG_30, reg);
-
-	BK4819_WriteRegister(BK4819_REG_3F, BK4819_REG_02_CxCSS_TAIL);
-    
-	BK4819_WriteRegister(BK4819_REG_51,
-		        BK4819_REG_51_ENABLE_CxCSS         |
-		        BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
-		        BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
-		        (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
-
-  	BK4819_WriteRegister(BK4819_REG_40, 13520);
-  	BK4819_WriteRegister(BK4819_REG_29, 43840);
-  	BK4819_WriteRegister(BK4819_REG_19, 4161);
-  	BK4819_WriteRegister(BK4819_REG_73, 18066);
-  	BK4819_WriteRegister(BK4819_REG_13, 958);
-  	BK4819_WriteRegister(BK4819_REG_3C, 20360);
-  	BK4819_WriteRegister(BK4819_REG_43, 13896);
-  	BK4819_WriteRegister(BK4819_REG_2B, 49152); */
+	BK4819_WriteRegister(BK4819_REG_13, 0x03BE);  // 0x03BE / 000000 11 101 11 110 /  -7dB
+    BK4819_WriteRegister(BK4819_REG_12, 0x037B);  // 0x037B / 000000 11 011 11 011 / -24dB
+    BK4819_WriteRegister(BK4819_REG_11, 0x027B);  // 0x027B / 000000 10 011 11 011 / -43dB
+    BK4819_WriteRegister(BK4819_REG_10, 0x007A);  // 0x007A / 000000 00 011 11 010 / -58dB
+    if(modulation==MODULATION_AM) {
+        BK4819_WriteRegister(BK4819_REG_14, 0x0000);
+        BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (32 << 0));
+    }
+    else{
+        BK4819_WriteRegister(BK4819_REG_14, 0x0019);  // 0x0019 / 000000 00 000 11 001 / -79dB
+        BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (56 << 0)); //0x2A38 / 00 1010100 0111000 / 84, 56
+    }
+    BK4819_WriteRegister(BK4819_REG_7B, 0x8420);
 }
 
 

@@ -815,7 +815,7 @@ static void ToggleAudio(bool on) {
 static void FillfreqHistory(void)
 {
     uint32_t f = peak.f;
-    if (f < 1400000 || f > 130000000) return;
+    if (f == 0 || f < 1400000 || f > 130000000) return;
 
     for (uint8_t i = 0; i < indexFs; i++) {
         if (HFreqs[i] == f) {
@@ -864,12 +864,12 @@ static void ToggleRX(bool on) {
     if (on && isKnownChannel) {
         if(!gForceModulation) settings.modulationType = channelModulation;
         //NO NAMES memmove(rxChannelName, channelName, sizeof(rxChannelName));
-        BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
+        BK4819_InitAGC(settings.modulationType);
         
     }
     else if(on && appMode == SCAN_BAND_MODE) {
             if (!gForceModulation) settings.modulationType = BParams[bl].modulationType;
-            BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
+            BK4819_InitAGC(settings.modulationType);
           }
     
     if (on) { 
@@ -882,7 +882,7 @@ static void ToggleRX(bool on) {
         if(appMode!=CHANNEL_MODE) BK4819_WriteRegister(0x43, GetBWRegValueForScan());
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
         RADIO_SetModulation(MODULATION_FM);
-        BK4819_InitAGC(gEeprom.RX_AGC, MODULATION_FM);
+        BK4819_InitAGC(MODULATION_FM);
     }
 
     ToggleAudio(on);
@@ -951,11 +951,11 @@ static void RelaunchScan() {
 }
 
 static void UpdateNoiseOff(){
-  if( BK4819_GetExNoiseIndicator() > Noislvl_OFF) {gIsPeak = false;ToggleRX(false);}		
+  if( BK4819_GetExNoiseIndicator() > Noislvl_OFF) {gIsPeak = false;}		
 }
 
 static void UpdateNoiseOn(){
-	if( BK4819_GetExNoiseIndicator() < Noislvl_ON) {gIsPeak = true;ToggleRX(true);}
+	if( BK4819_GetExNoiseIndicator() < Noislvl_ON) {gIsPeak = true;}
 }
 
 static void UpdateScanInfo() {
@@ -1091,7 +1091,7 @@ static void ToggleModulation() {
     settings.modulationType = MODULATION_FM;
   }
   RADIO_SetModulation(settings.modulationType);
-  BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
+  BK4819_InitAGC(settings.modulationType);
   gForceModulation = 1;
 }
 
@@ -2087,6 +2087,7 @@ static void OnKeyDown(uint8_t key) {
     case KEY_UP: //History
       if (historyListActive) {
         uint8_t count = CountValidHistoryItems();
+        SpectrumMonitor = 1; //Auto FL when moving in history
         if (!count) return;
         if (historyListIndex == 0) {
             historyListIndex = count - 1;
@@ -2135,6 +2136,7 @@ static void OnKeyDown(uint8_t key) {
   case KEY_DOWN: //History
       if (historyListActive) {
         uint8_t count = CountValidHistoryItems();
+        SpectrumMonitor = 1; //Auto FL when moving in history
         if (!count) return;
         historyListIndex++;
         if (historyListIndex >= count) {
@@ -2668,6 +2670,7 @@ static void UpdateListening(void) { // called every 10ms
     scanInfo.rssi = rssi;
     uint16_t count = GetStepsCount() + 1;
     uint16_t i = peak.i;
+    static bool prev_gIspeak;
 
     // --- Mise à jour du buffer RSSI ---
     if (count > 128) {
@@ -2698,10 +2701,10 @@ static void UpdateListening(void) { // called every 10ms
         stableFreq = peak.f;
         stableCount = 0;
     }
-
-    if (isListening || SpectrumMonitor || WaitSpectrum)
-        UpdateNoiseOff();
+    prev_gIspeak = gIsPeak;
+    if (isListening || SpectrumMonitor || WaitSpectrum) UpdateNoiseOff();
     UpdateNoiseOn();
+    if (prev_gIspeak != gIsPeak) ToggleRX(gIsPeak);
 
     spectrumElapsedCount+=10; //in ms
     uint32_t maxCount = (uint32_t)MaxListenTime * 1000;

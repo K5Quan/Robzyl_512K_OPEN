@@ -134,9 +134,6 @@ static void CheckForIncoming(void)
 	if (gCurrentFunction != FUNCTION_INCOMING)
 	{
 		FUNCTION_Select(FUNCTION_INCOMING);
-		//BK4819_InitAGC(gEeprom.RX_AGC, gTxVfo->Modulation); //Test Kolyan
-		//gUpdateDisplay = true;
-
 		UpdateRSSI();
 		gUpdateRSSI = true;
 	}
@@ -335,19 +332,6 @@ static void HandleFunction(void)
 
 void APP_StartListening(FUNCTION_Type_t Function)
 {
-
-/* 	//VFO sensitivity test KOLYAN
- 	BK4819_WriteRegister(BK4819_REG_40, 13520);
-  	BK4819_WriteRegister(BK4819_REG_29, 43840);
-  	BK4819_WriteRegister(BK4819_REG_19, 4161);
-  	BK4819_WriteRegister(BK4819_REG_73, 18066);
-  	BK4819_WriteRegister(BK4819_REG_13, 958);
-  	BK4819_WriteRegister(BK4819_REG_3C, 20360);
-  	BK4819_WriteRegister(BK4819_REG_43, 13896);
-  	BK4819_WriteRegister(BK4819_REG_2B, 49152);
-	BK4819_SetFilterBandwidth(gCurrentVfo->CHANNEL_BANDWIDTH, false);*/
-	BK4819_InitAGC(gEeprom.RX_AGC, gTxVfo->Modulation);
-
 	const unsigned int chan = 0;
 	if (gFmRadioMode)
 		BK1080_Init(0, false);
@@ -400,7 +384,7 @@ void APP_StartListening(FUNCTION_Type_t Function)
 	}
 	else
 		gUpdateDisplay = true;
-
+	BK4819_InitAGC(gTxVfo->Modulation);
 	
 }
 

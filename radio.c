@@ -333,9 +333,6 @@ void RADIO_ConfigureChannel(const unsigned int configure)
 		pVfo->freq_config_RX.CodeType = CODE_TYPE_OFF;
 		pVfo->freq_config_TX.CodeType = CODE_TYPE_OFF;
 	}
-
-	//BK4819_InitAGC(gEeprom.RX_AGC, gTxVfo->Modulation);
-	//BK4819_SetAGC(1); //Test Kolyan
 	RADIO_ConfigureSquelchAndOutputPower(pVfo);
 }
 
