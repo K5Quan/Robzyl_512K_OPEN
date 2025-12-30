@@ -152,7 +152,6 @@ static uint16_t scanChannel[MR_CHANNEL_LAST + 3];
 static uint8_t ScanListNumber[MR_CHANNEL_LAST + 3];
 static uint16_t scanChannelsCount;
 static void ToggleScanList();
-static void LoadSettings();
 static void SaveSettings();
 static const uint16_t RSSI_MAX_VALUE = 255;
 static uint16_t R30, R37, R3D, R43, R47, R48, R7E, R02, R3F;
@@ -1635,7 +1634,7 @@ static void SetTrigger50(){
   }
   else {
       sprintf(triggerText, "Trigger: %d", settings.rssiTriggerLevelUp);
-      if (previousTrigger == 50) LoadSettings();
+      if (previousTrigger == 50) LoadSettings(0);
   }
   ShowOSDPopup(triggerText);
   previousTrigger = settings.rssiTriggerLevelUp;
@@ -1739,6 +1738,7 @@ static void OnKeyDown(uint8_t key) {
             break;
 				
             case KEY_EXIT: // Exit band list
+                SpectrumMonitor = 0;
                 SetState(SPECTRUM); // Return to band scanning mode
                 RelaunchScan(); 
                 break;
@@ -1804,6 +1804,7 @@ static void OnKeyDown(uint8_t key) {
                 break;
 				
         case KEY_EXIT: // Exit scan list selection
+                SpectrumMonitor = 0;
                 SetState(SPECTRUM); // Return to scanning mode
                 ResetModifiers();
                 gForceModulation = 0; //Kolyan request release modulation
@@ -2199,6 +2200,7 @@ static void OnKeyDown(uint8_t key) {
     gSpectrumChangeRequested = true;
     isInitialized = false;
     spectrumElapsedCount = 0;
+    SpectrumMonitor = 0;
   break;
   
     case KEY_SIDE1:
@@ -2801,7 +2803,7 @@ void APP_RunSpectrum(uint8_t Spectrum_state)
         else mode = FREQUENCY_MODE;
 
         EEPROM_WriteBuffer(0x1D00, &Spectrum_state);
-        if (!Key_1_pressed) LoadSettings();
+        if (!Key_1_pressed) LoadSettings(0);
         appMode = mode;
         ResetModifiers();
         if (appMode==CHANNEL_MODE) LoadValidMemoryChannels();
@@ -2941,7 +2943,7 @@ typedef struct {
 } SettingsEEPROM;
 
 
-static void LoadSettings()
+void LoadSettings(bool LNA)
 {
   if(!IsVersionMatching()) ClearSettings();
 
@@ -2949,6 +2951,10 @@ static void LoadSettings()
   
   // Lecture de toutes les données
   EEPROM_ReadBuffer(0x1D10, &eepromData, sizeof(eepromData));
+  BK4819_WriteRegister(BK4819_REG_13, eepromData.R13);
+
+  if (LNA) return;
+  
   for (int i = 0; i < 15; i++) {
     settings.scanListEnabled[i] = (eepromData.scanListFlags >> i) & 0x01;
     SLRssiTriggerLevelUp[i] = eepromData.SLRssiTriggerLevelUp[i];
@@ -2990,10 +2996,11 @@ static void LoadSettings()
   BK4819_WriteRegister(BK4819_REG_29, eepromData.R29);
   BK4819_WriteRegister(BK4819_REG_19, eepromData.R19);
   BK4819_WriteRegister(BK4819_REG_73, eepromData.R73);
-  BK4819_WriteRegister(BK4819_REG_13, eepromData.R13);
   BK4819_WriteRegister(BK4819_REG_3C, eepromData.R3C);
   BK4819_WriteRegister(BK4819_REG_43, eepromData.R43);
   BK4819_WriteRegister(BK4819_REG_2B, eepromData.R2B);
+  
+  
 #ifdef ENABLE_EEPROM_512K
   if (!historyLoaded) {
      ReadHistory();

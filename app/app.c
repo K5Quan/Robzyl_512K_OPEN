@@ -27,8 +27,8 @@
 #include "app/menu.h"
 #include "app/scanner.h"
 #include "app/uart.h"
+#include "app/spectrum.h"
 #include "ARMCM0.h"
-
 #include "board.h"
 #include "bsp/dp32g030/gpio.h"
 #include "driver/backlight.h"
@@ -384,6 +384,7 @@ void APP_StartListening(FUNCTION_Type_t Function)
 	}
 	else
 		gUpdateDisplay = true;
+	LoadSettings(1);
 	BK4819_InitAGC(gTxVfo->Modulation);
 	
 }
