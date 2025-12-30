@@ -384,8 +384,8 @@ void APP_StartListening(FUNCTION_Type_t Function)
 	}
 	else
 		gUpdateDisplay = true;
-	LoadSettings(1);
-	BK4819_InitAGC(gTxVfo->Modulation);
+	
+	BK4819_InitAGC(gEeprom.RX_AGC, gTxVfo->Modulation);
 	
 }
 

@@ -40,24 +40,24 @@ char gSubtone_String[16] = "";
 
 
 
-// РИСУЕМ АУДИОБАР И БАР СМЕТРА ОБЩИЙ стирает строку всю
-// РИСУЕМ АУДИОБАР СЕКЦИЯМИ — ширина 80 пикселей, секции 5 пикселей шириной, пробел 2 пикселя (шаг 7), высота 7 пикселей (с отступами)
+
+// РИСУЕМ АУДИОБАР СЕКЦИЯМИ — шире ровно на одну секцию (bar_width = 41), секции 4 пикселя + пробел 2 пикселя (шаг 6), высота 3 пикселя (добавил 1 пиксель сверху)
 void DrawLevelBar(uint8_t xpos, uint8_t y_pos, uint8_t level_percent)
 {
-    const uint8_t bar_width = 80;              // фиксированная ширина 80 пикселей
-    const uint8_t section_width = 5;           // ширина секции
-    const uint8_t gap = 2;                     // пробел между секциями
-    const uint8_t step = section_width + gap;  // шаг 7 пикселей
-    const uint8_t max_sections = 11;           // 11 секций = 55 + 20 = 75 пикселей (оставляем запас для 80)
+    const uint8_t bar_width = 42;              // шире ровно на одну секцию
+    const uint8_t section_width = 4;           // секции 4 пикселя шириной
+    const uint8_t gap = 1;                     // пробел 2 пикселя
+    const uint8_t step = section_width + gap;  // шаг 6 пикселей
+    const uint8_t max_sections = 7;            // 5 секций = 20 + 8 = 28 пикселей заполненных (запас под 41)
 
     uint8_t sections = (max_sections * level_percent) / 100;
     if (sections > max_sections) sections = max_sections;
 
-    uint8_t filled_width = sections * step;  // ширина заполненной части
+    uint8_t filled_width = sections * step;
     if (filled_width > bar_width) filled_width = bar_width;
 
-    // Высота 7 пикселей (5 пикселей бар + 1 сверху + 1 снизу)
-    for (uint8_t dy = 0; dy < 7; dy++) {
+    // Очистка ТОЛЬКО высоты секций (3 пикселя) — линии не стираются
+    for (uint8_t dy = 2; dy < 5; dy++) {  // dy=2,3,4 (3 пикселя высотой — добавил 1 сверху)
         uint8_t y = y_pos + dy;
         if (y >= LCD_HEIGHT) continue;
 
@@ -71,17 +71,18 @@ void DrawLevelBar(uint8_t xpos, uint8_t y_pos, uint8_t level_percent)
             bit_shift = (y - 8) % 8;
         }
 
-        // Очищаем только область бара (80 пикселей) + справа до конца экрана
-        for (uint8_t x = xpos; x < LCD_WIDTH; x++) {
+        // Очищаем ТОЛЬКО область бара (41 пиксель)
+        for (uint8_t x = xpos; x < xpos + bar_width; x++) {
+            if (x >= LCD_WIDTH) break;
             p_line[x] &= ~(1u << bit_shift);
         }
     }
 
-    // Заливаем заполненные секции (только чёрные)
+    // Заливаем заполненные секции — 3 пикселя высотой (добавил 1 сверху)
     for (uint8_t s = 0; s < sections; s++) {
         uint8_t section_x = xpos + s * step;
 
-        for (uint8_t dy = 1; dy < 6; dy++) {  // заливаем средние 5 пикселей (отступ 1 сверху/снизу)
+        for (uint8_t dy = 2; dy < 5; dy++) {  // dy=2,3,4 (3 пикселя высотой)
             uint8_t y = y_pos + dy;
             if (y >= LCD_HEIGHT) continue;
 
@@ -104,7 +105,6 @@ void DrawLevelBar(uint8_t xpos, uint8_t y_pos, uint8_t level_percent)
     }
 }
 
-// АУДИОБАР ПРИ ПЕРЕДАЧЕ — 80x4 пикселя, раздельные Y для MR и VFO
 // АУДИОБАР ПРИ ПЕРЕДАЧЕ — секции 3 пикселя + пробел 2 пикселя, раздельные X и Y для MR и VFO
 void UI_DisplayAudioBar(void)
 {
@@ -128,8 +128,8 @@ void UI_DisplayAudioBar(void)
 	// РАЗДЕЛЬНЫЕ КООРДИНАТЫ ДЛЯ MR И VFO
 	uint8_t xpos_mr  = 46;   // MR: X = 5 (отступ слева)
 	uint8_t xpos_vfo = 46;  // VFO: X = 10 (отступ слева)
-	uint8_t y_mr     = 9;  // MR: Y = 50 пикселей
-	uint8_t y_vfo    = 9;  // VFO: Y = 42 пикселя
+	uint8_t y_mr     = 8;  // MR: Y = 50 пикселей
+	uint8_t y_vfo    = 8;  // VFO: Y = 42 пикселя
 
 	uint8_t xpos = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? xpos_mr : xpos_vfo;
 	uint8_t y_pos = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
@@ -137,129 +137,122 @@ void UI_DisplayAudioBar(void)
 	DrawLevelBar(xpos, y_pos, level_percent);
 }
 
-// S-МЕТР + AFC + RSSI — бар скрыт, строка AFC/RSSI в MR и VFO при приёме
+// S-МЕТР + AFC + RSSI + СУБТОН — всё только при активном приёме
 void DisplayRSSIBar(const int16_t rssi)
 {
-	if (gCurrentFunction != FUNCTION_RECEIVE && 
-	    gCurrentFunction != FUNCTION_MONITOR && 
-	    gCurrentFunction != FUNCTION_INCOMING)
-		return;
+    if (gCurrentFunction != FUNCTION_RECEIVE && 
+        gCurrentFunction != FUNCTION_MONITOR && 
+        gCurrentFunction != FUNCTION_INCOMING)
+        return;
 
-	if (gEeprom.KEY_LOCK && gKeypadLocked > 0) 
-		return;
+    if (gEeprom.KEY_LOCK && gKeypadLocked > 0) 
+        return;
 
-	if (gCurrentFunction == FUNCTION_TRANSMIT || gScreenToDisplay != DISPLAY_MAIN) 
-		return;
+    if (gCurrentFunction == FUNCTION_TRANSMIT || gScreenToDisplay != DISPLAY_MAIN) 
+        return;
 
-	sLevelAttributes sLevelAtt = GetSLevelAttributes(rssi, gTxVfo->freq_config_RX.Frequency);
-	uint8_t overS9Bars = MIN(sLevelAtt.over / 10, 4);
-	// uint8_t bar_level = sLevelAtt.sLevel + overS9Bars;  // не используется — бар скрыт
+    sLevelAttributes sLevelAtt = GetSLevelAttributes(rssi, gTxVfo->freq_config_RX.Frequency);
+    uint8_t overS9Bars = MIN(sLevelAtt.over / 10, 4);
 
-	// === БАР S-МЕТРА СКРЫТ ПОЛНОСТЬЮ (в MR и VFO) ===
-	// DrawLevelBar(1, 6, bar_level);  // закомментировано — бар не рисуется нигде
+    // === ОЧИЩАЕМ СТАРУЮ ИНФОРМАЦИЮ О СУБТОНЕ (важно!) ===
+    gSubtone_String[0] = '\0';
 
-	// === СУБТОН (CTCSS/CDCSS) — сканируем в MR и VFO (для нижнего вывода)
-	gSubtone_String[0] = '\0';
+    // === СКАНИРУЕМ СУБТОН (CTCSS/DCS) ===
+    BK4819_WriteRegister(BK4819_REG_51,
+        BK4819_REG_51_ENABLE_CxCSS |
+        BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
+        BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
+        (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
 
-	BK4819_WriteRegister(BK4819_REG_51,
-		BK4819_REG_51_ENABLE_CxCSS |
-		BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
-		BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
-		(51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
+    uint32_t cdcssFreq;
+    uint16_t ctcssFreq;
+    BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
 
-	uint32_t cdcssFreq;
-	uint16_t ctcssFreq;
-	BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
+    if (scanResult == BK4819_CSS_RESULT_CTCSS) {
+        uint8_t code = DCS_GetCtcssCode(ctcssFreq);
+        if (code < ARRAY_SIZE(CTCSS_Options))
+            sprintf(gSubtone_String, "%u.%uHz", CTCSS_Options[code] / 10, CTCSS_Options[code] % 10);
+    }
+    else if (scanResult == BK4819_CSS_RESULT_CDCSS) {
+        uint8_t code = DCS_GetCdcssCode(cdcssFreq);
+        if (code != 0xFF)
+            sprintf(gSubtone_String, "D%03oN", DCS_Options[code]);
+    }
 
-	if (scanResult == BK4819_CSS_RESULT_CTCSS) {
-		uint8_t code = DCS_GetCtcssCode(ctcssFreq);
-		if (code < ARRAY_SIZE(CTCSS_Options))
-			sprintf(gSubtone_String, "%u.%uHz", CTCSS_Options[code] / 10, CTCSS_Options[code] % 10);
-	}
-	else if (scanResult == BK4819_CSS_RESULT_CDCSS) {
-		uint8_t code = DCS_GetCdcssCode(cdcssFreq);
-		if (code != 0xFF)
-			sprintf(gSubtone_String, "D%03oN", DCS_Options[code]);
-	}
+    // === AFC, RSSI, S-meter ===
+    char afcStr[16] = "";
+    char rssiStr[16] = "";
+    char smeterStr[16] = "";
 
-	// === AFC, RSSI и S-meter — РАЗДЕЛЬНЫЕ НЕЗАВИСИМЫЕ СТРОКИ САМЫМ МАЛЕНЬКИМ ШРИФТОМ ===
-	// Очищаем строку 6 (если нужно — можно убрать)
-	// memset(gFrameBuffer[6], 0, LCD_WIDTH);
+    // AFC
+    int32_t hz = ((int64_t)(int16_t)BK4819_ReadRegister(0x6D) * 1000LL) / 291LL;
+    if (hz != 0) {
+        sprintf(afcStr, "AFC:%+d", (int)hz);
+    }
 
-	char afcStr[16] = "";
-	char rssiStr[16] = "";
-	char smeterStr[16] = "";
+    // RSSI
+    sprintf(rssiStr, "dBm%d", sLevelAtt.dBmRssi);
 
-	// AFC
-	int32_t hz = ((int64_t)(int16_t)BK4819_ReadRegister(0x6D) * 1000LL) / 291LL;
-	if (hz != 0) {
-		sprintf(afcStr, "AFC:%+d", (int)hz);
-	}
+    // S-meter
+    if (overS9Bars == 0)
+        sprintf(smeterStr, "S%d", sLevelAtt.sLevel);
+    else
+        sprintf(smeterStr, "S+%d", sLevelAtt.over);
 
-	// RSSI
-	sprintf(rssiStr, "dBm%d", sLevelAtt.dBmRssi);
+    // === ВЫВОД ВСЕГО НА ЭКРАН (AFC, RSSI, S-meter, СУБТОН) ===
 
-	// S-meter
-	if (overS9Bars == 0)
-		sprintf(smeterStr, "S%d", sLevelAtt.sLevel);
-	else
-		sprintf(smeterStr, "+%ddB", sLevelAtt.over);
+    // AFC
+    if (afcStr[0] != '\0')
+    {
+        uint8_t y_mr = 1; uint8_t x_mr = 3;
+        uint8_t y_vfo = 1; uint8_t x_vfo = 3;
 
-	// РАЗДЕЛЬНЫЕ КООРДИНАТЫ ДЛЯ КАЖДОЙ СТРОКИ В MR И VFO
-	// Формат: { y_mr, x_mr, y_vfo, x_vfo }
+        uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
+        uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
 
-	// AFC
-	if (afcStr[0] != '\0')
-	{
-		uint8_t y_mr = 2; uint8_t x_mr = 2;   // MR: Y=48 (строка 6), X=10 (слева)
-		uint8_t y_vfo = 2; uint8_t x_vfo = 4; // VFO: Y=48, X=10
+        GUI_DisplaySmallestDark(afcStr, x, y, false, true);
+    }
 
-		uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
-		uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
+    // RSSI
+    if (rssiStr[0] != '\0')
+    {
+        uint8_t y_mr = 1; uint8_t x_mr = 84;
+        uint8_t y_vfo = 1; uint8_t x_vfo = 84;
 
-		GUI_DisplaySmallestDark(afcStr, x, y, false, true);
-	}
+        uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
+        uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
 
-	// RSSI
-	if (rssiStr[0] != '\0')
-	{
-		uint8_t y_mr = 2; uint8_t x_mr = 84;   // MR: центр
-		uint8_t y_vfo =2; uint8_t x_vfo = 84; // VFO: центр
+        GUI_DisplaySmallestDark(rssiStr, x, y, false, true);
+    }
 
-		uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
-		uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
+    // S-meter
+    if (smeterStr[0] != '\0')
+    {
+        uint8_t y_mr = 1; uint8_t x_mr = 54;
+        uint8_t y_vfo = 1; uint8_t x_vfo = 54;
 
-		GUI_DisplaySmallestDark(rssiStr, x, y, false, true);
-	}
+        uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
+        uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
 
-	// S-meter
-	if (smeterStr[0] != '\0')
-	{
-		uint8_t y_mr = 2; uint8_t x_mr = 70;   // MR: справа
-		uint8_t y_vfo = 2; uint8_t x_vfo = 70; // VFO: справа
+        GUI_DisplaySmallestDark(smeterStr, x, y, false, true);
+    }
 
-		uint8_t y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
-		uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
+    // === СУБТОН — выводим только если найден (при активном приёме) ===
+    if (gSubtone_String[0] != '\0')
+    {
+        uint8_t x_vfo = 115;   uint8_t y_vfo = 32;
+        uint8_t x_mr  = 28;    uint8_t y_mr  = 32;
 
-		GUI_DisplaySmallestDark(smeterStr, x, y, false, true);
-	}
+        uint8_t subtone_x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
+        uint8_t subtone_y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
 
-		/*/ Независимые позиции строки AFC + RSSI
-	uint8_t text_line;
-	uint8_t x_pos;
+        uint8_t text_width = strlen(gSubtone_String) * 4;  // GUI_DisplaySmallest — 4 пикселя на символ
+        subtone_x -= text_width / 2;
 
-	if (IS_MR_CHANNEL(gEeprom.ScreenChannel)) {
-		text_line = 6;  // ← строка в MR (меняй 0-7)
-		x_pos = 64;     // ← позиция в MR (центр или фиксированная)
-	} else {
-		text_line = 6;  // ← строка в VFO
-		x_pos = (LCD_WIDTH - text_width) / 2;  // центр или фиксированная
-	}
-
-	memset(gFrameBuffer[text_line], 0, LCD_WIDTH);
-	UI_PrintStringSmall(fullStr, x_pos, 0, text_line, 0);*/
+        GUI_DisplaySmallest(gSubtone_String, subtone_x, subtone_y, false, true);
+    }
+    // Если субтона нет — gSubtone_String пустой → ничего не выводится → старое значение исчезает
 }
-
 //***********************ЭКРАН ЧАСТОТЫ И ниже--------------------------------------//
 
 void UI_DisplayMain(void)
@@ -308,6 +301,33 @@ void UI_DisplayMain(void)
 			//	UI_PrintStringSmall(String, 1, 0, line + 3, 0); //Тот же шрифт 6×8, то же место (4 пикселя слева, line+2)
 			UI_PrintString(String, 18 - (strlen(String) * 4), 0, line + 1, 8); // по центру
 		}
+
+						// ИМЯ КАНАЛА 
+				if (IS_MR_CHANNEL(gEeprom.ScreenChannel))
+				{
+					const ChannelAttributes_t att = gMR_ChannelAttributes[gEeprom.ScreenChannel];
+					if (att.scanlist > 0) {
+						sprintf(String, "L%d", att.scanlist);
+						GUI_DisplaySmallestDark(String, 19, 25, false, true); // СПИСОК СКАНИРОВАНИЯ
+					}
+
+					const bool inputting = (gInputBoxIndex == 0) ? false : true;
+					if (!inputting) {
+						char DisplayString[22];
+
+						// Пробуем взять имя канала
+						SETTINGS_FetchChannelName(DisplayString, gEeprom.ScreenChannel);
+
+						// Если имени нет — берём текущую частоту (как в VFO-режиме)
+						if (DisplayString[0] == 0) {
+							uint32_t freq = BOARD_fetchChannelFrequency(gEeprom.ScreenChannel);
+							sprintf(DisplayString, "%u.%05u", freq / 100000, freq % 100000);  // ← ПОЛНАЯ ЧАСТОТА С НУЛЯМИ
+						}
+
+						// Выводим ИМЯ КАНАЛА (или частоту с нулями)
+						UI_PrintString(DisplayString, 85 - (strlen(DisplayString) * 4), 0, line + 1, 8); // по центру
+					}
+				}
 		
 	
 						// ВВОД ЧАСТОТЫ В VFO — МЕНЯЙ ЗДЕСЬ
@@ -346,34 +366,6 @@ void UI_DisplayMain(void)
 				{
 					// В VFO — большие цифры как было
 					UI_DisplayFrequency(String, big_x_center - (strlen(String) * 8 / 2), big_y, false);
-				}
-
-
-								// ИМЯ КАНАЛА 
-				if (IS_MR_CHANNEL(gEeprom.ScreenChannel))
-				{
-					const ChannelAttributes_t att = gMR_ChannelAttributes[gEeprom.ScreenChannel];
-					if (att.scanlist > 0) {
-						sprintf(String, "L%d", att.scanlist);
-						GUI_DisplaySmallestDark(String, 20, 26, false, true); // СПИСОК СКАНИРОВАНИЯ
-					}
-
-					const bool inputting = (gInputBoxIndex == 0) ? false : true;
-					if (!inputting) {
-						char DisplayString[22];
-
-						// Пробуем взять имя канала
-						SETTINGS_FetchChannelName(DisplayString, gEeprom.ScreenChannel);
-
-						// Если имени нет — берём текущую частоту (как в VFO-режиме)
-						if (DisplayString[0] == 0) {
-							uint32_t freq = BOARD_fetchChannelFrequency(gEeprom.ScreenChannel);
-							sprintf(DisplayString, "%u.%05u", freq / 100000, freq % 100000);  // ← ПОЛНАЯ ЧАСТОТА С НУЛЯМИ
-						}
-
-						// Выводим ИМЯ КАНАЛА (или частоту с нулями)
-						UI_PrintString(DisplayString, 85 - (strlen(DisplayString) * 4), 0, line + 1, 8); // по центру
-					}
 				}
 			}
 
@@ -589,28 +581,6 @@ const char *bw = bwStr;
 	}
 
 
-	// ───────────────────── СУБТОН (CTCSS/CDCSS) — САМЫЙ МАЛЕНЬКИЙ ШРИФТ, ПО ЦЕНТРУ, ОТДЕЛЬНО ДЛЯ VFO И MR ─────────────────────
-		
-//if (gSubtone_String[0] != '\0')
-if (!IS_MR_CHANNEL(gEeprom.ScreenChannel) && gSubtone_String[0] != '\0') //скрыть мр
-{
-    // ОТДЕЛЬНЫЕ НАСТРОЙКИ ДЛЯ VFO И MR
-    uint8_t x_vfo = 115;   uint8_t y_vfo = 32;  // VFO: центр по X (64), строка 2
-    uint8_t x_mr  = 60;   uint8_t y_mr  = 2;  // MR: центр по X (64), строка 2
-
-    // Выбираем координаты в зависимости от режима
-    uint8_t subtone_x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
-    uint8_t subtone_y = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? y_mr : y_vfo;
-
-    // Центрирование по X (автоматическое)
-    uint8_t text_len = strlen(gSubtone_String);
-    uint8_t text_width = text_len * 4;  // ширина символа в GUI_DisplaySmallest — 4 пикселя
-    subtone_x = subtone_x - (text_width / 2);
-
-    // Выводим самым маленьким шрифтом
-    GUI_DisplaySmallest(gSubtone_String, subtone_x, subtone_y, false, true);
-
-}
 
 //************************УВЕДОМЛЕНИЯ — ОБЕ ПОЛОВИНЫ С БЕЛЫМ ФОНОМ, Y ОТДЕЛЬНО ДЛЯ MR/VFO************************** */
 unsigned int state = VfoState;
@@ -657,8 +627,8 @@ typedef struct {
 
 // ─────────────────────────────── VFO РЕЖИМ ───────────────────────────────
 static const dashed_line_t vfo_lines[] = {
-	{ 8,  0, 127, 2 },   // верхняя линия — частый пунктир
-	{ 16,  0, 127, 2 },   // верхняя линия — частый пунктир
+	{ 9,  0, 127, 2 },   // верхняя линия — частый пунктир
+	{ 13,  0, 127, 2 },   // верхняя линия — частый пунктир
 	{ 21,   0, 127, 2 },   // центральная — сплошная
 	{ 48,  0, 127, 2 },   // нижняя — редкий пунктир
 	{ 52,  0, 127, 2 },   // нижняя — редкий пунктир
@@ -666,12 +636,13 @@ static const dashed_line_t vfo_lines[] = {
 
 // ─────────────────────────────── MR РЕЖИМ ────────────────────────────────
 static const dashed_line_t mr_lines[] = {
-	{ 8,  0, 127, 2 },   // верхняя линия — частый пунктир
-	{ 16,  0, 127, 2 },   // верхняя линия — частый пунктир
+	{ 9,  0, 127, 2 },   // верхняя линия — частый пунктир
+	{ 13,  0, 127, 2 },   // верхняя линия — частый пунктир
 	{ 30,  0, 127, 2 },   // нижняя — редкий пунктирир
 	{ 48,  0, 127, 2 },   // нижняя — редкий пунктир
 	{ 52,  0, 127, 2 },   // нижняя — редкий пунктир
 };
+
 
 // Выбираем нужный массив и рисуем
 {
@@ -712,13 +683,14 @@ typedef struct {
 // ─────────────────────────────── VFO РЕЖИМ ───────────────────────────────
 static const vertical_dashed_t vfo_vlines[] = {
 	{  14, 23, 46, 2 },   // левая сплошная (обрамляет частоту)
-	// { 50, 15, 50, 4 },
+
 };
 
 // ─────────────────────────────── MR РЕЖИМ ────────────────────────────────
 static const vertical_dashed_t mr_vlines[] = {
 	{  35, 18, 28, 2 },   // чуть правее, чем в VFO — под Mxxx
 	{  14, 32, 47, 2 },  
+
 
 };
 
@@ -754,8 +726,8 @@ static const vertical_dashed_t mr_vlines[] = {
 	{
 		// MR-режим — две строки
 		//GUI_DisplaySmallest("MR MODE",     1, 2, false, true); 
-		GUI_DisplaySmallestDark	("MR MODE",     2, 2, false, true);    // false, true шаг между символами
-		GUI_DisplaySmallest		("CHANEL NAME",     82, 2, false, true);   // X=8,  Y=18
+		GUI_DisplaySmallestDark	("MR MODE",     0, 1, false, true);    // false, true шаг между символами
+		GUI_DisplaySmallestDark("CHANEL",     90, 1, false, true);   // X=8,  Y=18
 		GUI_DisplaySmallestDark("SQL",  6, 40, false, false);
 		GUI_DisplaySmallestDark("BAND", 28, 40, false, false);
 		GUI_DisplaySmallestDark("STEP", 58, 40, false, false);
@@ -767,9 +739,9 @@ static const vertical_dashed_t mr_vlines[] = {
 	{
 		// VFO-режим — две строки
 		//GUI_DisplaySmallest("VFO MODE",     1, 2, false, true);   // X=15, Y=10
-		GUI_DisplaySmallestDark("VFO",     1, 2, false, true); 
-		GUI_DisplaySmallestDark("MODE",     20, 2, false, true); 
-		GUI_DisplaySmallest	   ("FREQUENCY",  90, 2, false, true);   // X=22, Y=18
+		GUI_DisplaySmallestDark("VFO",     1, 1, false, false); 
+		GUI_DisplaySmallestDark("MODE",     16, 1, false, true); 
+		GUI_DisplaySmallestDark("FREQUENCY",  90, 1, false, false);   // X=22, Y=18
 		GUI_DisplaySmallestDark("SQL",  6, 40, false, false);
 		GUI_DisplaySmallestDark("BAND", 28, 40, false, false);
 		GUI_DisplaySmallestDark("STEP", 58, 40, false, false);

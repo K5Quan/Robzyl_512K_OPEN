@@ -195,10 +195,21 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 					gFlagResetVfos    = true;
 					break;
 
-				case KEY_3:
+				/*case KEY_3:
 					// Длинное 3 = F+3
 					COMMON_SwitchVFOMode();
-					break;
+					break;*///чиним 512 длинное 3
+
+					case KEY_3:
+    if (bKeyHeld && bKeyPressed)  // длинное нажатие
+    {
+        COMMON_SwitchVFOMode();   // ← переключаем MR ↔ VFO
+        gUpdateDisplay = true;
+        gWasFKeyPressed = false;
+        return;
+    }
+    // Короткое нажатие 3 — если нужно что-то другое, добавь здесь
+    break;
 
 				case KEY_4:
 					// Длинное 4 — смена полосы
@@ -381,28 +392,35 @@ static void MAIN_Key_MENU()
 
 static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 {
-	uint16_t Channel = gEeprom.ScreenChannel;
-	if (!bKeyPressed && !bKeyHeld) return;
-	if (gInputBoxIndex > 0)	return;
+    if (!bKeyPressed && !bKeyHeld) return;
+    if (gInputBoxIndex > 0) return;
 
-	uint16_t Next;
+    // Проверяем, в частотном ли режиме VFO (не канал)
+    if (IS_FREQ_CHANNEL(gTxVfo->CHANNEL_SAVE))
+    {
+        // VFO-режим (частота) — меняем частоту шагом
+        uint32_t frequency = APP_SetFrequencyByStep(gTxVfo, Direction);
+        if (RX_freq_check(frequency) == 0xFF) return;  // если вне диапазона — не меняем
 
-	if (IS_FREQ_CHANNEL(Channel))
-	{
-		uint32_t frequency = APP_SetFrequencyByStep(gTxVfo, Direction);
-		if (RX_freq_check(frequency) == 0xFF) return;
-		gTxVfo->freq_config_RX.Frequency = frequency;
-		BK4819_SetFrequency(frequency);
-		gRequestSaveChannel = 1;
-		return;
-	}
-	Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
-	if (Next == 0xFFFF || Next == Channel) return;
-	gEeprom.MrChannel     = Next;
-	gEeprom.ScreenChannel = Next;
-	gRequestSaveVFO       = true;
-	gVfoConfigureMode     = VFO_CONFIGURE_RELOAD;
-	gPttWasReleased       = true;
+        gTxVfo->freq_config_RX.Frequency = frequency;
+        gTxVfo->freq_config_TX.Frequency = frequency + gTxVfo->TX_OFFSET_FREQUENCY;  // если есть offset
+        BK4819_SetFrequency(frequency);
+        gRequestSaveChannel = 1;
+        gUpdateDisplay = true;
+        return;
+    }
+
+    // MR-режим (канал) — переключаем каналы
+    uint16_t Channel = gEeprom.ScreenChannel;
+    uint16_t Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
+    if (Next == 0xFFFF || Next == Channel) return;
+
+    gEeprom.MrChannel     = Next;
+    gEeprom.ScreenChannel = Next;
+    gRequestSaveVFO       = true;
+    gVfoConfigureMode     = VFO_CONFIGURE_RELOAD;
+    gUpdateDisplay        = true;
+    gPttWasReleased       = true;
 }
 
 void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)

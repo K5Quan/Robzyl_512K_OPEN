@@ -424,7 +424,8 @@ void RADIO_ConfigureSquelchAndOutputPower(VFO_Info_t *pInfo)
 	Band = FREQUENCY_GetBand(pInfo->pTX->Frequency);
 
 	EEPROM_ReadBuffer(0x1ED0 + (Band * 16) + (pInfo->OUTPUT_POWER * 3), Txp, 3);
-	const uint8_t p1 = 100;
+	//const uint8_t p1 = 100;
+	const uint8_t p1 = 4;
 	const uint8_t p2 = 1;
 	const uint8_t p3 = 40;	
 	// Robby69 reduced power
@@ -523,13 +524,13 @@ void RADIO_SetupRegisters(bool switchToForeground)
 	// what does this in do ?
 	BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
 
-	// AF RX Gain and DAC
-	//BK4819_WriteRegister(BK4819_REG_48, 0xB3A8);  // 1011 00 111010 1000
-	BK4819_WriteRegister(BK4819_REG_48,
-		(11u << 12)                 |     // ??? .. 0 ~ 15, doesn't seem to make any difference
-		( 0u << 10)                 |     // AF Rx Gain-1
-		(gEeprom.VOLUME_GAIN << 4) |     // AF Rx Gain-2
-		(gEeprom.DAC_GAIN    << 0));     // AF DAC Gain (after Gain-1 and Gain-2)
+// AF RX Gain and DAC 
+    BK4819_WriteRegister(BK4819_REG_48,
+    (11u << 12) |     // оставляем
+    ( 0u << 10) |     // AF Rx Gain-1 = 0dB
+    (62u <<  4) |     // AF Rx Gain-2 = Max
+    (12u <<  0));     // AF DAC Gain = 12 (loud and clear)
+	BK4819_InitAGC(gEeprom.RX_AGC, gTxVfo->Modulation);
 
 
 	uint16_t InterruptMask = BK4819_REG_3F_SQUELCH_FOUND | BK4819_REG_3F_SQUELCH_LOST;

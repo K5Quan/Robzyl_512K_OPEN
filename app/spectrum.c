@@ -51,10 +51,15 @@ static uint32_t free_ram_bytes(void)
 static volatile bool gSpectrumChangeRequested = false;
 static volatile uint8_t gRequestedSpectrumState = 0;
 
+#ifdef ENABLE_EEPROM_512K
+  #define HISTORY_SIZE 100
+#else
+  #define HISTORY_SIZE 250
+#endif
 
-#define HISTORY_SIZE 100
-static uint8_t historyListIndex = 0;
-static uint8_t indexFs = 0;
+
+static uint16_t historyListIndex = 0;
+static uint16_t indexFs = 0;
 static int historyScrollOffset = 0;
 static uint32_t    HFreqs[HISTORY_SIZE];
 static uint8_t     HCount[HISTORY_SIZE];
@@ -143,7 +148,7 @@ struct FrequencyBandInfo {
 static bool isBlacklistApplied;
 static uint32_t cdcssFreq;
 static uint16_t ctcssFreq;
-static uint8_t refresh = 0;
+//static uint8_t refresh = 0; // СУБТОНО ЗАПРОС ВСЕГДА
 #define F_MAX frequencyBandTable[ARRAY_SIZE(frequencyBandTable) - 1].upper
 #define Bottom_print 51 //Robby69
 static Mode appMode;
@@ -193,7 +198,7 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
 
 static uint32_t currentFreq, tempFreq;
 static uint8_t rssiHistory[128];
-static int ShowLines = 3;
+static int ShowLines = 1;  // СТРОКА ПО УМОЛЧАНИЮ
 static uint8_t freqInputIndex = 0;
 static uint8_t freqInputDotIndex = 0;
 static KEY_Code_t freqInputArr[10];
@@ -462,18 +467,6 @@ static void SetF(uint32_t f) {
   BK4819_WriteRegister(BK4819_REG_30, 0);
   BK4819_WriteRegister(BK4819_REG_30, reg);
 }
-
-/* static void SetF(uint32_t f) {
-  const uint16_t regrx = 0xBDF1; //afdac bit
-  if (f < 1400000 || f > 130000000) return;
-  BK4819_PickRXFilterPathBasedOnFrequency(f);
-  BK4819_SetFrequency(f);
-  uint16_t reg = 0x3FF0; // reset rx-dsp bit <0> and vco bit <15> Precise
-  //reg = regrx & ~BK4819_REG_30_ENABLE_VCO_CALIB; //vco calib 
-  //uint16_t reg = BK4819_ReadRegister(BK4819_REG_30);
-  BK4819_WriteRegister(BK4819_REG_30, reg);
-  BK4819_WriteRegister(BK4819_REG_30, regrx);
-} */
 
 static void ResetInterrupts()
 {
@@ -863,12 +856,12 @@ static void ToggleRX(bool on) {
     if (on && isKnownChannel) {
         if(!gForceModulation) settings.modulationType = channelModulation;
         //NO NAMES memmove(rxChannelName, channelName, sizeof(rxChannelName));
-        BK4819_InitAGC(settings.modulationType);
+        BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
         
     }
     else if(on && appMode == SCAN_BAND_MODE) {
             if (!gForceModulation) settings.modulationType = BParams[bl].modulationType;
-            BK4819_InitAGC(settings.modulationType);
+            BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
           }
     
     if (on) { 
@@ -880,10 +873,9 @@ static void ToggleRX(bool on) {
         BK4819_SetFilterBandwidth(BK4819_FILTER_BW_WIDE, false); //Scan in 25K bandwidth
         if(appMode!=CHANNEL_MODE) BK4819_WriteRegister(0x43, GetBWRegValueForScan());
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
-        RADIO_SetModulation(MODULATION_FM);
-        BK4819_InitAGC(MODULATION_FM);
+        //RADIO_SetModulation(MODULATION_FM);
+        //BK4819_InitAGC(gEeprom.RX_AGC, MODULATION_FM);
     }
-
     ToggleAudio(on);
     ToggleAFDAC(on);
     ToggleAFBit(on);
@@ -950,11 +942,11 @@ static void RelaunchScan() {
 }
 
 static void UpdateNoiseOff(){
-  if( BK4819_GetExNoiseIndicator() > Noislvl_OFF) {gIsPeak = false;}		
+  if( BK4819_GetExNoiseIndicator() > Noislvl_OFF) {gIsPeak = false;ToggleRX(0);}		
 }
 
 static void UpdateNoiseOn(){
-	if( BK4819_GetExNoiseIndicator() < Noislvl_ON) {gIsPeak = true;}
+	if( BK4819_GetExNoiseIndicator() < Noislvl_ON) {gIsPeak = true;ToggleRX(1);}
 }
 
 static void UpdateScanInfo() {
@@ -1090,7 +1082,7 @@ static void ToggleModulation() {
     settings.modulationType = MODULATION_FM;
   }
   RADIO_SetModulation(settings.modulationType);
-  BK4819_InitAGC(settings.modulationType);
+  BK4819_InitAGC(gEeprom.RX_AGC, settings.modulationType);
   gForceModulation = 1;
 }
 
@@ -1176,7 +1168,7 @@ static void UpdateFreqInput(KEY_Code_t key) {
 }
 
 static bool IsBlacklisted(uint32_t f) {
-    for (uint8_t i = 0; i < HISTORY_SIZE; i++) {
+    for (uint16_t i = 0; i < HISTORY_SIZE; i++) {
         if (HFreqs[i] == f && HBlacklisted[i]) {
             return true;
         }
@@ -1191,7 +1183,7 @@ static void Blacklist() {
     isBlacklistApplied = true;
     ResetScanStats();
     NextScanStep();
-    for (uint8_t i = 0; i < HISTORY_SIZE; i++) {
+    for (uint16_t i = 0; i < HISTORY_SIZE; i++) {
         if (HFreqs[i] == peak.f) {
             HBlacklisted[i] = true;
             historyListIndex = i;
@@ -1228,13 +1220,23 @@ static int16_t Rssi2Y(uint16_t rssi) {
   return DrawingEndY + delta -Rssi2PX(rssi, delta, DrawingEndY);
 }
 
+//**********************ПИКИ СПЕКТРА РИСУЕМ С ОТСТУПОМ.*********************** */
 static void DrawSpectrum()
 {
-    for (uint8_t i = 0; i < 128; ++i)
-    {   
-        uint16_t rssi = rssiHistory[i];
-        if (rssi != RSSI_MAX_VALUE) DrawVLine(Rssi2Y(rssi), DrawingEndY, i, true);
-    }
+                  // === ПИКИ СПЕКТРА С ОТСТУПАМИ ПО 4 ПИКСЕЛЯ СЛЕВА И СПРАВА ===
+        const uint8_t left_margin  = 3;   // отступ слева
+        const uint8_t right_margin = 3;   // отступ справа
+        const uint8_t graph_width  = 128 - left_margin - right_margin;  // 120 пикселей
+
+        for (uint8_t i = 0; i < graph_width; ++i) {
+            uint8_t x = left_margin + i;  // реальная позиция на экране
+            uint16_t rssi = rssiHistory[i];
+
+            if (rssi != RSSI_MAX_VALUE) {
+                DrawVLine(Rssi2Y(rssi), DrawingEndY, x, true);
+            }
+        }
+        // === КОНЕЦ ПИКОВ С ОТСТУПАМИ ===    
 }
 
 static void RemoveTrailZeros(char *s) {
@@ -1265,9 +1267,28 @@ static void RemoveTrailZeros(char *s) {
 }
 
 
+//******************************СТАТУСБАР************** */
 static void DrawStatus() {
   int len=0;
   int pos=0;
+
+  /*/ === НАСТРАИВАЕМАЯ ПУНКТИРНАЯ ЛИНИЯ В СТАТУСБАРЕ ===
+const uint8_t line_y       = 7;     // ← Y позиция линии (0–7)
+const uint8_t left_x       = 1;    // ← начало по X (0–127)
+const uint8_t right_x      = 127;   // ← конец по X (0–127)
+const uint8_t dash_step    = 2;     // ← шаг пунктира (1 = сплошная, 2 = •◦, 4 = •◦◦◦ и т.д.)
+const bool    line_white   = true;  // true = белая линия, false = чёрная (на индикаторах)
+
+// Рисуем пунктирную линию
+for (uint8_t x = left_x; x <= right_x; x += dash_step) {
+    if (line_white) {
+        gStatusLine[x] |=  (1 << line_y);   // белая точка
+    } else {
+        gStatusLine[x] &= ~(1 << line_y);   // чёрная точка (стирает)
+    }
+}
+// === КОНЕЦ ЛИНИИ ===/*/
+
 
    switch(appMode) {
     case FREQUENCY_MODE:
@@ -1377,30 +1398,38 @@ static void FormatFrequency(uint32_t f, char *buf, size_t buflen) {
 
 // ------------------ CSS detection ------------------
 static void UpdateCssDetection(void) {
-    if (refresh == 0) {
-        BK4819_WriteRegister(BK4819_REG_51,
-		        BK4819_REG_51_ENABLE_CxCSS         |
-		        BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
-		        BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
-		        (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
-		
-        BK4819_CssScanResult_t scanResult =
-            BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
-        refresh = 30;
-        if (scanResult == BK4819_CSS_RESULT_CDCSS) {
-            uint8_t code = DCS_GetCdcssCode(cdcssFreq);
-            if (code != 0xFF)
-                snprintf(StringCode, sizeof(StringCode), "D%03oN", DCS_Options[code]);
-        } else if (scanResult == BK4819_CSS_RESULT_CTCSS) {
-            uint8_t code = DCS_GetCtcssCode(ctcssFreq);
+    // Проверяем только когда есть приём сигнала
+    if (!isListening && !gIsPeak) {
+        StringCode[0] = '\0';  // очищаем, если нет сигнала
+        return;
+    }
+
+    // Включаем CxCSS детектор
+    BK4819_WriteRegister(BK4819_REG_51,
+        BK4819_REG_51_ENABLE_CxCSS |
+        BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
+        BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
+        (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
+
+    BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
+
+    if (scanResult == BK4819_CSS_RESULT_CDCSS) {
+        uint8_t code = DCS_GetCdcssCode(cdcssFreq);
+        if (code != 0xFF) {
+            snprintf(StringCode, sizeof(StringCode), "D%03oN", DCS_Options[code]);
+            return;
+        }
+    } else if (scanResult == BK4819_CSS_RESULT_CTCSS) {
+        uint8_t code = DCS_GetCtcssCode(ctcssFreq);
+        if (code < ARRAY_SIZE(CTCSS_Options)) {
             snprintf(StringCode, sizeof(StringCode), "%u.%uHz",
                      CTCSS_Options[code] / 10, CTCSS_Options[code] % 10);
-        } else {
-            StringCode[0] = '\0';
+            return;
         }
     }
-    if (refresh > 0) refresh--; 
-    else StringCode[0] = '\0';
+
+    // Если ничего не нашли — очищаем
+    StringCode[0] = '\0';
 }
 
 // ------------------ Enabled scan lists ------------------
@@ -1422,7 +1451,8 @@ static void DrawF(uint32_t f) {
     if (f < 1400000 || f > 130000000) return;
     char freqStr[18];
     FormatFrequency(f, freqStr, sizeof(freqStr));
-    if(ShowLines > 1)UpdateCssDetection();
+    //if(ShowLines > 1)UpdateCssDetection();
+    UpdateCssDetection(); // субтон новый
     //char enabledLists[64];
     //BuildEnabledScanLists(enabledLists, sizeof(enabledLists));
     f = HFreqs[historyListIndex];
@@ -1492,29 +1522,58 @@ static void DrawF(uint32_t f) {
         snprintf(line3, sizeof(line3), "EMPTY");
       }
     
-    // ------------------------------------------------------------
-    // AFFICHAGE
-    // ------------------------------------------------------------
+   // AFFICHAGE// СТРОКИ СПЕКТРА 3шт
     if (classic) {
-        if (ShowLines <6) {
-        if (ShowLines == 0) ArrowLine = 0; //Draw nothing
-        if (ShowLines == 1) {UI_DisplayFrequency(line1,  0, 0, 0);   ArrowLine = 2;}
-        if (ShowLines > 1 )  {UI_PrintStringSmall(line1b, 1, 1, 0,1); ArrowLine = 1;}
-        if (ShowLines > 2)  {UI_PrintStringSmall(line2,  1, 1, 1,1); ArrowLine = 2;}
-        if (ShowLines == 4)  {UI_PrintStringSmall(line3b,1, 1, 2,0); ArrowLine = 2;}
-        if (ShowLines == 5)  {UI_PrintStringSmall(line3, 1, 1, 2,1); ArrowLine = 3;}
+        if (ShowLines < 3) {
+            // Режим 1: только частота + CSS (одна строка обычным шрифтом)
+            if (ShowLines == 2) {
+               //UI_PrintStringSmall(line1b, 0, 0, 0, 0);  // строка 1: частота + CSS
+                UI_DisplayFrequency(line1, 9, 0, 0);  // большая частота (большим шрифтом)
+                GUI_DisplaySmallestDark(StringCode, 70, 17, false, false);  // CSS субтон
+               // GUI_DisplaySmallestDark(line1,      0, 24, false, false);  // частота
+                GUI_DisplaySmallestDark(line2,      8, 17, false, true);  // имя канала / бэнд / список
+                 //GUI_DisplaySmallestDark(line3,  60, 16, false, false);  // история
+                 GUI_DisplaySmallestDark	("8 MORE", 98, 17, false, false);  
+                ArrowLine = 3;
+            }
+
+            // Режим 2: частота + CSS + имя канала/SL (две строки обычным шрифтом) БЕЛЫЙ
+            if (ShowLines == 1) {
+                UI_PrintStringSmall(line1b, 10, 1, 0, 0);  // строка 1: частота + CSS
+                UI_PrintStringSmall(line2,  10, 1, 1, 0);  // строка 2: имя канала / SL / бэнд
+                
+                // Мелкие данные dark-шрифтом (ниже обычных строк)
+                GUI_DisplaySmallestDark(line3b, 8,17, false, false);  // таймеры
+                GUI_DisplaySmallestDark(line3,  30, 17, false, false);  // история
+                GUI_DisplaySmallestDark	("SCAN",     106, 17, false, false);   
+              
+                ArrowLine = 3;
+            }
+
+            /*/ Режим 3: частота + CSS + имя + мелкие данные dark-шрифтом ниже
+            if (ShowLines == 3) {
+              UI_PrintStringSmall(line1b, 1, 1, 0, 1);  // строка 1: частота + CSS
+                UI_PrintStringSmall(line2,  1, 1, 1, 1);  // строка 2: имя канала / SL / бэнд
+
+                // Мелкие данные dark-шрифтом (ниже обычных строк)
+                GUI_DisplaySmallestDark(line3b, 35, 17, false, false);  // таймеры
+                GUI_DisplaySmallestDark(line3,  70, 17, false, false);  // история
+                GUI_DisplaySmallestDark	("SCAN",     3, 17, false, true);  
+               
+                ArrowLine = 3;  // стрелка на второй строке (можно 3, если хочешь на таймерах)
+            }*/
         }
-        else if (ShowLines == 6)  {
-          GUI_DisplaySmallest(line1b, 0, 8,  true,true);
-          GUI_DisplaySmallest(line2,  64, 8,  true,true);
-          GUI_DisplaySmallest(line3b, 0, 14, true,true);
-          GUI_DisplaySmallest(line3,  0, 20, true,true);
-          ArrowLine = 3;
-        }
-      if (Fmax) {
+
+
+
+   
+//*******************МАКСИМАЛЬНОЕ**************ЗНАЧЕНИЕ В НИЭНЕЙ СТРОКЕ ЦЕНТР*/
+ if (Fmax) {
           FormatFrequency(Fmax, freqStr, sizeof(freqStr));
           GUI_DisplaySmallest(freqStr,  50, Bottom_print, false,true);
-      }  
+      } 
+     
+
     } else {
         DrawMeter(6);
         if (StringCode[0]) {UI_PrintStringSmall(line1b, 1, 1, 0,1);}
@@ -1522,10 +1581,6 @@ static void DrawF(uint32_t f) {
         UI_PrintString(line2, 1, 1, 2, 8);
         UI_PrintString(line3b, 1, 1, 4, 8);
       }
-      
-      
-
-      
 }
 
 static void LookupChannelInfo() {
@@ -1559,21 +1614,21 @@ static void LookupChannelModulation() {
 
 }
 
-
+//*********************НАЧАЛО И КОНЕЦ ВНИЗУ******************** */
 static void DrawNums() {
   if (appMode==CHANNEL_MODE) 
   {
     sprintf(String, "M:%d", scanChannel[0]+1);
-    GUI_DisplaySmallest(String, 0, Bottom_print, false, true);
+    GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
 
     sprintf(String, "M:%d", scanChannel[GetStepsCount()-1]+1);
     GUI_DisplaySmallest(String, 108, Bottom_print, false, true);
   }
   if(appMode!=CHANNEL_MODE){
-    sprintf(String, "%u.%05u", gScanRangeStart / 100000, gScanRangeStart % 100000); //Robby69 was %u.%05u
-    GUI_DisplaySmallest(String, 0, Bottom_print, false, true);
+    sprintf(String, "%u.%05u", gScanRangeStart / 100000, gScanRangeStart % 100000); //старт %u.%05u
+    GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
  
-    sprintf(String, "%u.%05u", gScanRangeStop / 100000, gScanRangeStop % 100000); //Robby69 was %u.%05u
+    sprintf(String, "%u.%05u", gScanRangeStop / 100000, gScanRangeStop % 100000); //стоп %u.%05u
     GUI_DisplaySmallest(String, 90, Bottom_print, false, true);
   }
   
@@ -1610,8 +1665,8 @@ static void NextScanStep() {
 
 }
 
-static uint8_t CountValidHistoryItems() {
-    uint8_t count = 0;
+static uint16_t CountValidHistoryItems() {
+    uint16_t count = 0;
     for (uint16_t i = 0; i < HISTORY_SIZE; i++) {if (HFreqs[i]) count++;}
     return count;
 }
@@ -2069,7 +2124,7 @@ static void OnKeyDown(uint8_t key) {
         }
       break;
 
-    case KEY_8:
+    case KEY_8://СМЕНА РЕЖИМА
       if (historyListActive) {
           memset(HFreqs,0,sizeof(HFreqs));
           memset(HCount,0,sizeof(HCount));
@@ -2079,15 +2134,16 @@ static void OnKeyDown(uint8_t key) {
           indexFs = 0;
           SpectrumMonitor = 0;
       } else {
-          ShowLines++; 
-          if (ShowLines > 6) ShowLines = 0;
+         // ShowLines++; 
+          //if (ShowLines > 3) ShowLines = 1; // 3 режима
+          ShowLines = (ShowLines == 1) ? 2 : 1;  // переключает только между 1 и 2
       }
     break;
 
       
     case KEY_UP: //History
       if (historyListActive) {
-        uint8_t count = CountValidHistoryItems();
+        uint16_t count = CountValidHistoryItems();
         SpectrumMonitor = 1; //Auto FL when moving in history
         if (!count) return;
         if (historyListIndex == 0) {
@@ -2136,7 +2192,7 @@ static void OnKeyDown(uint8_t key) {
     break;
   case KEY_DOWN: //History
       if (historyListActive) {
-        uint8_t count = CountValidHistoryItems();
+        uint16_t count = CountValidHistoryItems();
         SpectrumMonitor = 1; //Auto FL when moving in history
         if (!count) return;
         historyListIndex++;
@@ -2192,16 +2248,28 @@ static void OnKeyDown(uint8_t key) {
         }
     break;
   
-/* next mode poprawione */
-  case KEY_6:
-    Spectrum_state++;
-    if (Spectrum_state > 4) Spectrum_state = 0;
-    gRequestedSpectrumState = Spectrum_state;
-    gSpectrumChangeRequested = true;
-    isInitialized = false;
-    spectrumElapsedCount = 0;
-    SpectrumMonitor = 0;
-  break;
+/* next mode poprawione */ //СМЕНА РЕЖИМОВ
+     case KEY_6:
+        Spectrum_state++;
+        
+        // Теперь только 3 режима: 0 = FR, 1 = SL, 2 = BD
+        // Максимум 2, при 3 — обратно на 0
+        if (Spectrum_state > 2) Spectrum_state = 0;
+
+        gRequestedSpectrumState = Spectrum_state;
+        gSpectrumChangeRequested = true;
+
+        // Сброс состояния (чтобы не зависало)
+        isInitialized = false;
+        spectrumElapsedCount = 0;
+        WaitSpectrum = 0;
+        gIsPeak = false;
+        SPECTRUM_PAUSED = false;
+        SpectrumPauseCount = 0;
+        newScanStart = true;
+        ToggleRX(false);
+
+        break;
   
     case KEY_SIDE1:
         if (SPECTRUM_PAUSED) return;
@@ -2239,8 +2307,8 @@ static void OnKeyDown(uint8_t key) {
       break;
   
   case KEY_MENU: //History
-      int validCount = 0;
-      for (int k = 1; k < HISTORY_SIZE; k++) {
+      uint16_t validCount = 0;
+      for (uint16_t k = 1; k < HISTORY_SIZE; k++) {
           if (HFreqs[k]) {validCount++;}
       }
       if (historyListActive == true) {Last_Tuned_Freq = HFreqs[historyListIndex];}
@@ -2409,7 +2477,87 @@ static uint16_t DBm2Rssi(int dbm)
     return (uint16_t)rssi;
 }
 
+// === УНИВЕРСАЛЬНЫЕ ФУНКЦИИ ДЛЯ ЛИНИЙ (не конфликтуют с оригинальной DrawVLine) ===
+static void MyDrawHLine(uint8_t y, bool white)
+{
+    if (y >= 64) return;
+    uint8_t byte_idx = y / 8;
+    uint8_t bit_mask = 1U << (y % 8);
+    for (uint8_t x = 0; x < 128; x++) {
+        if (white) {
+            gFrameBuffer[byte_idx][x] &= ~bit_mask;  // белая
+        } else {
+            gFrameBuffer[byte_idx][x] |= bit_mask;   // чёрная
+        }
+    }
+}
 
+// Короткая горизонтальная пунктирная линия
+static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t step, bool white)
+{
+    if (y >= 64 || x_start >= x_end || x_end > 127) return;
+    uint8_t byte_idx = y / 8;
+    uint8_t bit_mask = 1U << (y % 8);
+
+    for (uint8_t x = x_start; x <= x_end; x++) {
+        if (step > 1 && (x % step) != 0) continue;  // пунктир
+
+        if (white) {
+            gFrameBuffer[byte_idx][x] &= ~bit_mask;  // белая
+        } else {
+            gFrameBuffer[byte_idx][x] |= bit_mask;   // чёрная
+        }
+    }
+}
+
+static void MyDrawVLine(uint8_t x, uint8_t y_start, uint8_t y_end, uint8_t step)
+{
+    if (x >= 128) return;
+    for (uint8_t y = y_start; y <= y_end && y < 64; y++) {
+        if (step > 1 && (y % step) != 0) continue;  // пунктир
+        uint8_t byte_idx = y / 8;
+        uint8_t bit_mask = 1U << (y % 8);
+        gFrameBuffer[byte_idx][x] |= bit_mask;  // чёрная (для белой сделай отдельно или параметр)
+    }
+}
+
+// === ТВОЯ РАМКА + ДОПОЛНИТЕЛЬНЫЕ ЛИНИИ ===
+static void MyDrawFrameLines(void)
+{
+    // Основная рамка
+    MyDrawHLine(50, true);   // белая горизонтальная на y=50
+    MyDrawHLine(49, false);  // чёрная горизонтальная на y=49
+
+    MyDrawVLine(0,   21, 49, 1);  // левая вертикальная сплошная
+    MyDrawVLine(127, 21, 49, 1);  // правая вертикальная сплошная
+
+    MyDrawVLine(0,   0, 17, 1);  // левая вертикальная сплошная
+    MyDrawVLine(127, 0, 17, 1);  // правая вертикальная сплошная
+
+    //MyDrawHLine(19, false);                  // чёрная горизонтальная на y=20
+    MyDrawShortHLine(0, 0, 3, 1, false);  // черная сплошная короткая
+    MyDrawShortHLine(0, 4, 8, 2, false);  // черная сплошная короткая
+    MyDrawShortHLine(0, 124, 127, 1, false);  // черная сплошная короткая
+    MyDrawShortHLine(0, 118, 123, 2, false);  // черная сплошная короткая
+    MyDrawShortHLine(17, 0, 10, 1, false);  // черная сплошная короткая
+    MyDrawShortHLine(17, 11, 119, 2, false);  // черная сплошная короткая
+    MyDrawShortHLine(17, 120, 127, 1, false);  // черная сплошная короткая
+    MyDrawShortHLine(21, 0, 10, 1, false);  // черная сплошная короткая
+    MyDrawShortHLine(21, 11, 119, 2, false);  // черная сплошная короткая
+    MyDrawShortHLine(21, 120, 127, 1, false);  // черная сплошная короткая
+   //MyDrawHLine(30, true);                   // белая горизонтальная на y=30
+
+
+    //MyDrawShortHLine(10, 20, 108, 4, false);  // Короткая чёрная пунктирная вверху (от x=20 до x=108, шаг 4)
+    //MyDrawVLine(64, 0, 63, 1);               // вертикальная в центре сплошная
+    //MyDrawVLine(32, 0, 63, 4);               // вертикальная пунктирная слева (шаг 4)
+    //MyDrawVLine(96, 0, 63, 3);               // вертикальная пунктирная справа (шаг 3)
+
+    // Добавь свои:
+    // MyDrawHLine(15, false);  // новая горизонтальная
+    // MyDrawVLine(48, 10, 50, 2);  // новая пунктирная вертикальная
+    // === КОНЕЦ ===
+}
 
 
 static void RenderSpectrum()
@@ -2419,28 +2567,56 @@ static void RenderSpectrum()
         UpdateDBMaxAuto();
         DrawSpectrum();
 
-        // === ФИКСИРОВАННЫЕ ГОРИЗОНТАЛЬНЫЕ ПУНКТИРНЫЕ ЛИНИИ ===
-        // 5 фиксированных уровней: -120, -90, -60, -30, 0 dBm
-        const int fixedLevels[] = {-120,-80,-40,0};
-        const int numLevels = 4;
+ // === ЛИНИИ С ОТСТУПОМ ПО 4 ПИКСЕЛЯ (только линии, тики от края) ===
+const int LEFT_MARGIN  = 4;
+const int RIGHT_MARGIN = 4;
 
-        int i;
-        int y;
-        int x;
+const int lineLevels[] = { -60, -40};   // твои уровни (меняй)
+const int numLineLevels = ARRAY_SIZE(lineLevels);
+const int dashStep = 2;                     // шаг пунктира
 
-        for (i = 0; i < numLevels; i++) {
-            y = Rssi2Y(DBm2Rssi(fixedLevels[i]));
+const int tickLevels[] = {-20, -50, -70, -100};  // тики (остаются от края)
+const int numTickLevels = ARRAY_SIZE(tickLevels);
+const int tickLength = 3;
 
-            if (y < 8 || y > DrawingEndY) continue;
+int i, y, x;
 
-            // ЧЁРНАЯ пунктирная линия ОТ КРАЯ ДО КРАЯ: 1:2
-            for (x = 0; x < 7; x++) {
-                PutPixel(x, y, true);  // Чёрная линия (белый пиксель на экране)
-            }
+// ПУНКТИРНЫЕ ЛИНИИ (с отступом 4 пикселя слева и справа)
+for (i = 0; i < numLineLevels; i++) {
+    y = Rssi2Y(DBm2Rssi(lineLevels[i]));
+    if (y < 8 || y > DrawingEndY) continue;
 
-        }
-        // === КОНЕЦ СЕТКИ ===
+    // Чёрная пунктирная линия (с отступами)
+    for (x = LEFT_MARGIN; x < 128 - RIGHT_MARGIN; x += dashStep) {
+        PutPixel(x, y, true);   // чёрный
     }
+
+    // Белая пунктирная линия (сдвиг на 1, с отступами)
+    for (x = LEFT_MARGIN + 1; x < 128 - RIGHT_MARGIN; x += dashStep) {
+        PutPixel(x, y, false);  // белый
+    }
+}
+
+// ТИКИ (остаются от самого края — без отступа)
+for (i = 0; i < numTickLevels; i++) {
+    y = Rssi2Y(DBm2Rssi(tickLevels[i]));
+    if (y < 8 || y > DrawingEndY) continue;
+
+    // Левый тик (от x=0)
+    for (x = 0; x < tickLength; x++) {
+        PutPixel(x, y, true);
+    }
+
+    // Правый тик (до x=127)
+    for (x = 0; x < tickLength; x++) {
+        PutPixel(127 - x, y, true);
+    }
+}
+// === КОНЕЦ СЕТКИ ===
+MyDrawFrameLines();
+
+        
+  }
 
     if(isListening) {
       DrawF(peak.f);
@@ -2601,7 +2777,7 @@ if (kbd.counter == 2 || (kbd.counter > 22 && (kbd.counter % 20 == 0))) {
 }
 
 static void NextHistoryScanStep() {
-    uint8_t count = CountValidHistoryItems();
+    uint16_t count = CountValidHistoryItems();
     if (count == 0) return;
 
     uint8_t start = historyListIndex;
@@ -2672,7 +2848,7 @@ static void UpdateListening(void) { // called every 10ms
     scanInfo.rssi = rssi;
     uint16_t count = GetStepsCount() + 1;
     uint16_t i = peak.i;
-    static bool prev_gIspeak;
+    //static bool prev_gIspeak;
 
     // --- Mise à jour du buffer RSSI ---
     if (count > 128) {
@@ -2703,10 +2879,10 @@ static void UpdateListening(void) { // called every 10ms
         stableFreq = peak.f;
         stableCount = 0;
     }
-    prev_gIspeak = gIsPeak;
+    //prev_gIspeak = gIsPeak;
     if (isListening || SpectrumMonitor || WaitSpectrum) UpdateNoiseOff();
     UpdateNoiseOn();
-    if (prev_gIspeak != gIsPeak) ToggleRX(gIsPeak);
+    //if (prev_gIspeak != gIsPeak) ToggleRX(gIsPeak);
 
     spectrumElapsedCount+=10; //in ms
     uint32_t maxCount = (uint32_t)MaxListenTime * 1000;
@@ -3092,14 +3268,14 @@ void ClearSettings()
   DelayRssi = 3;
   PttEmission = 2;
   settings.scanStepIndex = S_STEP_10_0kHz;
-  ShowLines = 3;
+  ShowLines = 1; //СТРОКА ПО УМОЛЧАНИЮ
   SpectrumDelay = 0;
   MaxListenTime = 0;
   IndexMaxLT = 0;
   IndexPS = 0;
   Backlight_On_Rx = 1;
-  Noislvl_OFF = 60; 
-  Noislvl_ON = 50;  
+  Noislvl_OFF = 69; 
+  Noislvl_ON = 59;  
   UOO_trigger = 15;
   osdPopupSetting = 500;
   for (int i = 0; i < 32; i++) { 
@@ -3295,13 +3471,16 @@ static void GetHistoryItemText(uint8_t index, char* buffer) {
     buffer[0] = '\0'; 
     snprintf(freqStr, sizeof(freqStr), "%u.%05u", f / 100000, f % 100000);
     RemoveTrailZeros(freqStr);
+    
     uint16_t Hchannel = BOARD_gMR_fetchChannel(f);
+    
     if (gCounthistory) {
         dcount = HCount[index];
     } else {
         dcount = HCount[index] / 2;
     }
     
+    // Lecture du nom du canal (Argument 1: Index, Argument 2: Buffer)
     if (Hchannel != 0xFFFF) {
         ReadChannelName(Hchannel, Name);
         Name[10] = '\0'; // Troncature explicite du nom à 10 caractères max
@@ -3309,8 +3488,10 @@ static void GetHistoryItemText(uint8_t index, char* buffer) {
     
     const char *blacklistPrefix = HBlacklisted[index] ? "#" : "";
 
+    // --- 2. Détermination de l'espace nécessaire (Max 18 chars) ---
     const size_t MAX_LINE_CHARS = 18; 
     
+    // Construction de la chaîne du compteur (Ex: ":5" ou ":1234")
     char dcountStr[6]; 
     snprintf(dcountStr, sizeof(dcountStr), ":%u", dcount);
 
@@ -3362,6 +3543,8 @@ static void GetHistoryItemText(uint8_t index, char* buffer) {
              dcountStr);
 }
 
+
+//*******************************СПИСКИ*****************************// */
 static void RenderList(const char* title, uint8_t numItems, uint8_t selectedIndex, uint8_t scrollOffset,
                       void (*getItemText)(uint8_t index, char* buffer)) {
     // Clear display buffer

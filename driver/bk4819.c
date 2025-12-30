@@ -275,23 +275,46 @@ void BK4819_SetAGC(bool enable)
 	//         0 = -33dB
 	//
 
-void BK4819_InitAGC(ModulationMode_t modulation)
-{   BK4819_WriteRegister(BK4819_REG_13, 0x03BE);  // 0x03BE / 000000 11 101 11 110 /  -7dB
-    BK4819_WriteRegister(BK4819_REG_12, 0x037B);  // 0x037B / 000000 11 011 11 011 / -24dB
-    BK4819_WriteRegister(BK4819_REG_11, 0x027B);  // 0x027B / 000000 10 011 11 011 / -43dB
-    BK4819_WriteRegister(BK4819_REG_10, 0x007A);  // 0x007A / 000000 00 011 11 010 / -58dB
-    if(modulation==MODULATION_AM) {
-        BK4819_WriteRegister(BK4819_REG_14, 0x0000);
-        BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (32 << 0));
-    }
-    else{
-        BK4819_WriteRegister(BK4819_REG_14, 0x0019);  // 0x0019 / 000000 00 000 11 001 / -79dB
-        BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (56 << 0)); //0x2A38 / 00 1010100 0111000 / 84, 56
-    }
-    BK4819_WriteRegister(BK4819_REG_7B, 0x8420);
+void BK4819_InitAGC(const uint8_t agcType, ModulationMode_t modulation)
+{
+	if(modulation==MODULATION_AM)
+	{
+		//AM modulation
+		switch(agcType)
+		{	
+			case RX_AGC_SLOW:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (5 << 0));
+				break;
+			case RX_AGC_FAST:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (50 << 7) | (20 << 0));
+				break;
+			default:
+				return;
+		}
+	}
+	else
+	{
+		//FM, USB modulation
+				switch(agcType)
+		{	
+			case RX_AGC_SLOW:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (46 << 0));
+				break;
+			case RX_AGC_FAST:
+				BK4819_WriteRegister(BK4819_REG_49, (0 << 14) | (84 << 7) | (66 << 0));
+				break;
+			default:
+				return;
+		}
+	}
+	LoadSettings(1);
+	// switched values to ones from 1o11 am_fix:
+	BK4819_WriteRegister(BK4819_REG_7B, 0x8420); //Test 4.15
+	BK4819_WriteRegister(BK4819_REG_12, 0x0393);  // 0x037B / 000000 11 011 11 011 / -24dB
+	BK4819_WriteRegister(BK4819_REG_11, 0x01B5);  // 0x027B / 000000 10 011 11 011 / -43dB
+	BK4819_WriteRegister(BK4819_REG_10, 0x0145);  // 0x007A / 000000 00 011 11 010 / -58dB
+	BK4819_WriteRegister(BK4819_REG_14, 0x0019);  // 0x0019 / 000000 00 000 11 001 / -84dB
 }
-
-
 
 void BK4819_ToggleGpioOut(BK4819_GPIO_PIN_t Pin, bool bSet)
 {
