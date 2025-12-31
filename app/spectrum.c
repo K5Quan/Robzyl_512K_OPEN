@@ -3226,15 +3226,16 @@ void ClearSettings()
     }
   settings.bandEnabled[0] = 1;
   
+  BK4819_WriteRegister(BK4819_REG_10, 0x0145);
+  BK4819_WriteRegister(BK4819_REG_11, 0x01B5);
+  BK4819_WriteRegister(BK4819_REG_12, 0x0393);
+  BK4819_WriteRegister(BK4819_REG_13, 0x03FF);
+  BK4819_WriteRegister(BK4819_REG_14, 0x0019);
+  
   BK4819_WriteRegister(BK4819_REG_40, 13520);
   BK4819_WriteRegister(BK4819_REG_29, 43840);
   BK4819_WriteRegister(BK4819_REG_19, 4161);
   BK4819_WriteRegister(BK4819_REG_73, 18066);
-  BK4819_WriteRegister(BK4819_REG_10, 0x0038);
-  BK4819_WriteRegister(BK4819_REG_11, 0x025a);
-  BK4819_WriteRegister(BK4819_REG_12, 0x037b);
-  BK4819_WriteRegister(BK4819_REG_13, 0x03de);
-  BK4819_WriteRegister(BK4819_REG_14, 0x0000);
   BK4819_WriteRegister(BK4819_REG_3C, 20360);
   BK4819_WriteRegister(BK4819_REG_43, 13896);
   BK4819_WriteRegister(BK4819_REG_2B, 49152);
