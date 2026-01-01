@@ -2187,16 +2187,18 @@ static void OnKeyDown(uint8_t key) {
   
 /* next mode poprawione */ //СМЕНА РЕЖИМОВ
      case KEY_6:
+        // Смена режимов спектра: 0 = FR, 1 = SL, 2 = BD, 3 = RG (4 режима)
         Spectrum_state++;
         
-        // Теперь только 3 режима: 0 = FR, 1 = SL, 2 = BD
-        // Максимум 2, при 3 — обратно на 0
-        if (Spectrum_state > 4) Spectrum_state = 0;
+        // Цикл по 4 режимам (0 → 1 → 2 → 3 → 0)
+        if (Spectrum_state > 3) {
+            Spectrum_state = 0;
+        }
 
         gRequestedSpectrumState = Spectrum_state;
         gSpectrumChangeRequested = true;
 
-        // Сброс состояния (чтобы не зависало)
+        // Полный сброс состояния спектра при смене режима
         isInitialized = false;
         spectrumElapsedCount = 0;
         WaitSpectrum = 0;
@@ -2204,8 +2206,9 @@ static void OnKeyDown(uint8_t key) {
         SPECTRUM_PAUSED = false;
         SpectrumPauseCount = 0;
         newScanStart = true;
-        ToggleRX(false);
+        ToggleRX(false);  // выкл RX на время смены
 
+        gUpdateDisplay = true;  // обновляем индикатор режима
         break;
   
     case KEY_SIDE1:
