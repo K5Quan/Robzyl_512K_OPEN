@@ -46,7 +46,7 @@ uint32_t txTimeSeconds = 0;
 uint32_t rxTimeSeconds = 0;
 bool isTxActive = false;
 // Добавь эти две строки:
-static uint8_t lastRadioState = 255;  // для отслеживания смены режима
+//static uint8_t lastRadioState = 255;  // для отслеживания смены режима // TIMER RX FIX
 
 static void MAIN_Key_STAR(bool closecall)
 {
@@ -510,7 +510,7 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 			break;
 			
 	}
-// === ДОБАВЬ ЭТОТ БЛОК В КОНЕЦ ФУНКЦИИ ===
+/*/ === ДОБАВЬ ЭТОТ БЛОК В КОНЕЦ ФУНКЦИИ ===
     // Отслеживаем реальное состояние радиостанции (TX / RX)
     if (gCurrentFunction != lastRadioState) {
         if (gCurrentFunction == FUNCTION_TRANSMIT) {
@@ -521,5 +521,5 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         }
         lastRadioState = gCurrentFunction;
     }
-    // === КОНЕЦ ДОБАВЛЕННОГО БЛОКА ===
+    // === КОНЕЦ ДОБАВЛЕННОГО БЛОКА ===*/  //// TIMER RX FIX
 }
