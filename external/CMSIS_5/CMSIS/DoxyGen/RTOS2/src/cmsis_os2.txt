@@ -1,4 +1,4 @@
-﻿/**
+/**
 \page genRTOS2IF Generic RTOS Interface
 
 CMSIS-RTOS2 is a generic API that is agnostic of the underlying RTOS kernel. Application programmers call CMSIS-RTOS2 API

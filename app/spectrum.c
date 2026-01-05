@@ -96,7 +96,6 @@ static uint16_t osdPopupTimer = 1000;
 static uint32_t Fmax = 0;
 static uint32_t spectrumElapsedCount = 0;
 static uint32_t SpectrumPauseCount = 0;
-static uint32_t TriggerPauseCount = 0;
 static bool SPECTRUM_PAUSED;
 static uint8_t IndexMaxLT = 0;
 static const char *labels[] = {"OFF","2s","5s","10s","30s", "1m", "5m", "10m", "20m", "30m"};
@@ -1977,7 +1976,6 @@ static void OnKeyDown(uint8_t key) {
           int step = (settings.rssiTriggerLevelUp >= 20) ? 5 : 1;
           settings.rssiTriggerLevelUp = (settings.rssiTriggerLevelUp >= 50? 0 : settings.rssiTriggerLevelUp + step);
           SPECTRUM_PAUSED = true;
-          TriggerPauseCount = 100; //pause to set Uxx
           if (!SpectrumMonitor) Skip();
           SetTrigger50();
           break;
@@ -1987,7 +1985,6 @@ static void OnKeyDown(uint8_t key) {
           int step = (settings.rssiTriggerLevelUp <= 20) ? 1 : 5;
           settings.rssiTriggerLevelUp = (settings.rssiTriggerLevelUp <= 0? 50 : settings.rssiTriggerLevelUp - step);
           SPECTRUM_PAUSED = true;
-          TriggerPauseCount = 100; //pause to set Uxx
           if (!SpectrumMonitor) Skip();
           SetTrigger50();
           break;
@@ -2739,7 +2736,7 @@ static void UpdateScan() {
   newScanStart = true; 
   Fmax = peak.f;
   
-  if (SpectrumSleepMs ||TriggerPauseCount) {
+  if (SpectrumSleepMs) {
       BK4819_Sleep();
       BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
       SPECTRUM_PAUSED = true;
@@ -2832,7 +2829,6 @@ static void Tick() {
     gNextTimeslice_10ms = 0;
     if (isListening || SpectrumMonitor || WaitSpectrum) UpdateListening(); 
     if(SpectrumPauseCount) SpectrumPauseCount--;
-    if(TriggerPauseCount) TriggerPauseCount--;
     if (osdPopupTimer > 0) {
         UI_DisplayPopup(osdPopupText);  // Wyświetl aktualny tekst
         ST7565_BlitFullScreen();
@@ -2843,7 +2839,7 @@ static void Tick() {
 
   }
 
-  if (SPECTRUM_PAUSED && (SpectrumPauseCount == 0 || TriggerPauseCount == 0)) {
+  if (SPECTRUM_PAUSED && (SpectrumPauseCount == 0)) {
       // fin de la pause
       SPECTRUM_PAUSED = false;
       BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);

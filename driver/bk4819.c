@@ -1531,7 +1531,7 @@ void play_mario_intro() {
 
 
 //###########################################################################################
- void roger_beep_r2d2(void) {
+/*  void roger_beep_r2d2(void) {
 	play_note(1318, 80);
     play_note(1568, 60);
     play_note(2093, 50);
@@ -1551,7 +1551,7 @@ void play_mario_intro() {
     play_note(2637, 80);   
     play_note(2093, 70);   
     play_note(1760, 100);
-} 
+}  */
 //###########################################################################################
 
  void roger_beep_r2d2_rnd(void){
@@ -1577,7 +1577,7 @@ void roger_beep_3(void) {
 
 
 //###########################################################################################
-
+/* 
 typedef struct {
     int freq;
     int dur;
@@ -1598,7 +1598,7 @@ void send_pacman(void) {
     for (size_t i = 0; i < sizeof(pacmanTheme)/sizeof(pacmanTheme[0]); i++) {
         play_note(pacmanTheme[i].freq, pacmanTheme[i].dur);
     }
-}
+} */
 
 
 
@@ -1619,18 +1619,10 @@ switch (song)
 	break;
 
 	case 2:
-		send_pacman();
-	break;
-
-	case 3:
-		roger_beep_r2d2();
-	break;
-
-	case 4:
 		roger_beep_3();	
 	break;
 	
-	case 5:
+	case 3:
 		roger_beep_r2d2_rnd();	
 	break;
 

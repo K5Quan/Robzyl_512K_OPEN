@@ -29,8 +29,8 @@ const uint16_t    fm_restore_countdown_10ms        =  5000 / 10;   // 5 seconds
 
 const uint8_t     vfo_state_resume_countdown_500ms =  2500 / 500;  // 2.5 seconds
 
-const uint8_t     menu_timeout_500ms               =  20000 / 500;  // 20 seconds
-const uint16_t    menu_timeout_long_500ms          = 120000 / 500;  // 2 minutes
+const uint8_t     menu_timeout_500ms               =  10000 / 500;  // 10 s
+const uint16_t    menu_timeout_long_500ms          =  30000 / 500;  // 30 s
 
 const uint8_t     key_input_timeout_500ms          =  4;  // 2 seconds
 

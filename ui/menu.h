@@ -82,7 +82,7 @@ extern const char        gSubMenu_OFF_ON[2][4];
 extern const char        gSubMenu_SAVE[5][4];
 extern const char        gSubMenu_TOT[11][7];
 extern const char        gSubMenu_PONMSG[4][8];
-extern const char        gSubMenu_ROGER[6][7];
+extern const char        gSubMenu_ROGER[4][7];
 extern const char        gSubMenu_RESET[2][9];
 extern const char* const gSubMenu_F_LOCK[F_LOCK_LEN];
 extern const char        gSubMenu_BACKLIGHT[8][7];

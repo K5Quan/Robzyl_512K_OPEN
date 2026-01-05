@@ -32,8 +32,6 @@ GUI_DisplayType_t gScreenToDisplay;
 GUI_DisplayType_t gRequestDisplayScreen = DISPLAY_INVALID;
 
 uint8_t           gAskForConfirmation;
-bool              gAskToSave;
-bool              gAskToDelete;
 
 void GUI_DisplayScreen(void)
 {
@@ -73,8 +71,6 @@ void GUI_SelectNextDisplay(GUI_DisplayType_t Display)
 		gCssBackgroundScan         = false;
 		gFM_ScanState    = FM_SCAN_OFF;
 		gAskForConfirmation  = 0;
-		gAskToSave           = false;
-		gAskToDelete         = false;
 		gWasFKeyPressed      = false;
 		        
 	}

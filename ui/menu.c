@@ -149,10 +149,8 @@ const char gSubMenu_ROGER[][7] =
 {
 	"OFF",
 	"MARIO",
-	"PACMAN",
-	"R2D2",
 	"BLAST",
-	"R2D2-2"
+	"R2D2"
 };
 
 const char gSubMenu_RESET[][9] =

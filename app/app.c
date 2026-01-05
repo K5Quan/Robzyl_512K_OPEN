@@ -720,7 +720,7 @@ void cancelUserInputModes(void)
 // this is called once every 500ms
 void APP_TimeSlice500ms(void)
 {
-	bool exit_menu = false;
+	static bool exit_menu = false;
 
 	if (gKeypadLocked > 0)
 		if (--gKeypadLocked == 0)
@@ -728,7 +728,7 @@ void APP_TimeSlice500ms(void)
 	if (gKeyInputCountdown > 0)	--gKeyInputCountdown;
 
 	if (gMenuCountdown > 0)
-		{if (--gMenuCountdown == 0) exit_menu = (gScreenToDisplay == DISPLAY_MENU);}// exit menu mode
+		{if (--gMenuCountdown == 0) exit_menu = (gScreenToDisplay == DISPLAY_MENU);} // exit menu mode
 
 		if (gFmRadioCountdown_500ms > 0)
 		{
@@ -739,7 +739,6 @@ void APP_TimeSlice500ms(void)
 
 
 if (gBacklightCountdown > 0 && !gBacklightAlwaysOn && 
-		!gAskToSave && 
 		!gCssBackgroundScan &&
 		!(gScreenToDisplay == DISPLAY_MENU && (UI_MENU_GetCurrentMenuId() == MENU_ABR || UI_MENU_GetCurrentMenuId() == MENU_ABR_MAX)) 
 		) 
@@ -787,7 +786,7 @@ if (gBacklightCountdown > 0 && !gBacklightAlwaysOn &&
 	
 	// regular display updates (once every 2 sec) - if need be
 	
-	if (gAskToSave && !gCssBackgroundScan)
+	if (!gCssBackgroundScan)
 	{
 		{
 			if (gEeprom.AUTO_KEYPAD_LOCK && gKeyLockCountdown > 0 && gScreenToDisplay != DISPLAY_MENU)
@@ -798,7 +797,7 @@ if (gBacklightCountdown > 0 && !gBacklightAlwaysOn &&
 			}
 
 			if (exit_menu)
-			{
+			{	exit_menu = false;
 				gMenuCountdown = 0;
 
 				if (gEeprom.BACKLIGHT_TIME == 0) // backlight always off
@@ -807,8 +806,6 @@ if (gBacklightCountdown > 0 && !gBacklightAlwaysOn &&
 				}
 				gWasFKeyPressed  = false;
 				gInputBoxIndex   = 0;
-				gAskToSave       = false;
-				gAskToDelete     = false;
 				{
 					GUI_DisplayType_t disp = DISPLAY_INVALID;
 

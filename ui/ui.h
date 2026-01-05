@@ -39,8 +39,6 @@ extern GUI_DisplayType_t gScreenToDisplay;
 extern GUI_DisplayType_t gRequestDisplayScreen;
 
 extern uint8_t           gAskForConfirmation;
-extern bool              gAskToSave;
-extern bool              gAskToDelete;
 
 void GUI_DisplayScreen(void);
 void GUI_SelectNextDisplay(GUI_DisplayType_t Display);

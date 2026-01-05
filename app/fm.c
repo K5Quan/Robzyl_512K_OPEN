@@ -100,7 +100,6 @@ void FM_Start(void)
 
 	gFmPlayCountdown_10ms = 0;
 	gScheduleFM           = false;
-	gAskToSave            = false;
 
 	BK1080_Init(gEeprom.FM_FrequencyPlaying, true);
 
