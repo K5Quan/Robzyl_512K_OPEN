@@ -1442,13 +1442,12 @@ static void DrawF(uint32_t f) {
         snprintf(prefix, sizeof(prefix), "B%u ", bl + 1);
         if (isListening)
              sprintf(line2,"%-3s%s ", prefix, channelName);
-        else snprintf(line2, sizeof(line2), "%-3s%s", prefix, BParams[bl].BandName);
+        else sprintf(line2,"%-3s%s", prefix, BParams[bl].BandName);
     } else {
         if (appMode == CHANNEL_MODE) {
 
             if (ScanListNumber[scanInfo.i] && ScanListNumber[scanInfo.i] <16) {
                 sprintf(prefix, "S%d ", ScanListNumber[scanInfo.i]);
-            
             } else {
                 sprintf(prefix, "ALL ");
               }

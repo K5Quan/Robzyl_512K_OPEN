@@ -39,14 +39,14 @@
 void UI_DisplayStatus()
 {
 	char time_str[6];
-	const uint8_t TIME_POS_X = 20;  // редактируемая позиция времени (X в пикселях, можно менять)
+	const uint8_t TIME_POS_X = 16;  // редактируемая позиция времени (X в пикселях, можно менять)
 
 	memset(gStatusLine, 0, sizeof(gStatusLine));
 
 	// === ОТДЕЛЬНЫЕ ПОЗИЦИИ ДЛЯ КАЖДОГО ИНДИКАТОРА ===
-	const uint8_t POS_TX   = 2;    // начало "TX" при передаче
-	const uint8_t POS_RX   = 2;    // начало "RX" при приёме
-	const uint8_t POS_PS   = 2;    // начало "PS" при Power Save
+	const uint8_t POS_TX   = 0;    // начало "TX" при передаче
+	const uint8_t POS_RX   = 0;    // начало "RX" при приёме
+	const uint8_t POS_PS   = 0;    // начало "PS" при Power Save
 	const uint8_t POS_LOCK = 72;   // Замок
 	const uint8_t POS_F    = 80;   // "F"
 	const uint8_t POS_B    = 88;   // "B"

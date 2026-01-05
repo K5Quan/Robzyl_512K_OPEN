@@ -90,7 +90,7 @@ void UI_DisplayFM(void)
 	}
 	// === Надписи мелким дарк шрифтом ===
 	GUI_DisplaySmallestDark("BROADCAST", 6, 6, false, true);
-	GUI_DisplaySmallestDark("STATION", 70, 38, false, true);
+	GUI_DisplaySmallestDark("STATION", 66, 38, false, true);
 
 
 	ST7565_BlitFullScreen();
