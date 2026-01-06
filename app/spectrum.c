@@ -3180,8 +3180,7 @@ void ClearSettings()
   Noislvl_ON = 59;  
   UOO_trigger = 15;
   osdPopupSetting = 500;
-  settings.bandEnabled[0] = 0;
-  
+  settings.bandEnabled[0] = 1;
   BK4819_WriteRegister(BK4819_REG_10, 0x0145);
   BK4819_WriteRegister(BK4819_REG_11, 0x01B5);
   BK4819_WriteRegister(BK4819_REG_12, 0x0393);

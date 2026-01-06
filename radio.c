@@ -714,9 +714,6 @@ void RADIO_PrepareTX(void)
 
 	if (TX_freq_check(gCurrentVfo->pTX->Frequency) == 0)
 	{	// TX frequency is allowed
-		if (gCurrentFunction == FUNCTION_RECEIVE)
-			State = VFO_STATE_BUSY;          // busy RX'ing a station
-		else
 		if (gBatteryDisplayLevel == 0)
 			State = VFO_STATE_BAT_LOW;       // charge your battery !
 		else
