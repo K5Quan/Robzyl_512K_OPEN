@@ -97,7 +97,6 @@ volatile uint8_t    gVFOStateResumeCountdown_500ms;
 
 bool              gEnableSpeaker;
 uint8_t           gKeyInputCountdown = 0;
-uint8_t           gKeyLockCountdown;
 bool              bIsInLockScreen;
 uint8_t           gFoundCTCSS;
 uint8_t           gFoundCDCSS;

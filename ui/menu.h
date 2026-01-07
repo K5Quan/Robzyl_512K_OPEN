@@ -64,7 +64,6 @@ enum
 	MENU_TXP           ,
 	MENU_VOL           ,
 	MENU_PONMSG        ,
-	MENU_AUTOLK        ,
 	MENU_BAT_TXT       ,	
 	MENU_DEL_CH        ,
 	MENU_MEM_NAME      ,	

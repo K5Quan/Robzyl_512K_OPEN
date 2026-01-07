@@ -35,7 +35,7 @@
 #include "ui/ui.h"
 #include "ui/status.h"
 #include "app/main.h"  // для txTimeSeconds, rxTimeSeconds, isTxActive
-
+uint16_t BK4819_GetRSSI(void);
 void UI_DisplayStatus()
 {
 	char time_str[6];
@@ -47,78 +47,30 @@ void UI_DisplayStatus()
 	const uint8_t POS_TX   = 0;    // начало "TX" при передаче
 	const uint8_t POS_RX   = 0;    // начало "RX" при приёме
 	const uint8_t POS_PS   = 0;    // начало "PS" при Power Save
-	const uint8_t POS_LOCK = 72;   // Замок
-	const uint8_t POS_F    = 80;   // "F"
-	const uint8_t POS_B    = 88;   // "B"
+	const uint8_t POS_LOCK = 82;   // Замок
+	const uint8_t POS_F    = 82;   // "F"
+	const uint8_t POS_B    = 54;   // "B"
 
-	// === Индикатор передачи "TX" (двойной) ===
+		// === Индикаторы TX / RX / PS — мелким шрифтом как у батареи (позиция по POS_...) ===
 	if (gCurrentFunction == FUNCTION_TRANSMIT)
 	{
-		// "T"
-		gStatusLine[POS_TX + 0] |= 0x7F;
-		gStatusLine[POS_TX + 1] |= 0x7D;
-		gStatusLine[POS_TX + 2] |= 0x41;
-		gStatusLine[POS_TX + 3] |= 0x41;
-		gStatusLine[POS_TX + 4] |= 0x7D;
-		gStatusLine[POS_TX + 5] |= 0x7F;
+		UI_PrintStringSmallBuffer("TX", gStatusLine + POS_TX);
 
-		// "X" вплотную после "T" (без пробела)
-		gStatusLine[POS_TX + 6] |= 0x5D;
-		gStatusLine[POS_TX + 7] |= 0x49;
-		gStatusLine[POS_TX + 8] |= 0x63;
-		gStatusLine[POS_TX + 9] |= 0x49;
-		gStatusLine[POS_TX + 10] |= 0x5D;
-		gStatusLine[POS_TX + 11] |= 0x7F;
-
-		// Время TX — тем же шрифтом, что и батарея
 		sprintf(time_str, "%02u:%02u", txTimeSeconds / 60, txTimeSeconds % 60);
 		UI_PrintStringSmallBuffer(time_str, gStatusLine + TIME_POS_X);
 	}
-
-	// === Индикатор приёма "RX" (двойной) ===
-	if (gCurrentFunction == FUNCTION_RECEIVE ||
-	    gCurrentFunction == FUNCTION_MONITOR ||
-	    gCurrentFunction == FUNCTION_INCOMING)
+	else if (gCurrentFunction == FUNCTION_RECEIVE ||
+	         gCurrentFunction == FUNCTION_MONITOR ||
+	         gCurrentFunction == FUNCTION_INCOMING)
 	{
-		// "R"
-		gStatusLine[POS_RX + 0] |= 0x7F;
-		gStatusLine[POS_RX + 1] |= 0x41;
-		gStatusLine[POS_RX + 2] |= 0x75;
-		gStatusLine[POS_RX + 3] |= 0x75;
-		gStatusLine[POS_RX + 4] |= 0x49;
-		gStatusLine[POS_RX + 5] |= 0x7F;
+		UI_PrintStringSmallBuffer("RX", gStatusLine + POS_RX);
 
-		// "X" вплотную после "R"
-		gStatusLine[POS_RX + 6] |= 0x5D;
-		gStatusLine[POS_RX + 7] |= 0x49;
-		gStatusLine[POS_RX + 8] |= 0x63;
-		gStatusLine[POS_RX + 9] |= 0x49;
-		gStatusLine[POS_RX + 10] |= 0x5D;
-		gStatusLine[POS_RX + 11] |= 0x7F;
-
-		// Время RX — тем же шрифтом, что и батарея
 		sprintf(time_str, "%02u:%02u", rxTimeSeconds / 60, rxTimeSeconds % 60);
 		UI_PrintStringSmallBuffer(time_str, gStatusLine + TIME_POS_X);
 	}
-
-	// === Индикатор Power Save "PS" (двойной, расстояние уменьшено на 1 пиксель) ===
-	if (gCurrentFunction == FUNCTION_POWER_SAVE)
+	else if (gCurrentFunction == FUNCTION_POWER_SAVE)
 	{
-		// "P"
-		gStatusLine[POS_PS + 0] |= 0x7F;
-		gStatusLine[POS_PS + 1] |= 0x41;
-		gStatusLine[POS_PS + 2] |= 0x75;
-		gStatusLine[POS_PS + 3] |= 0x75;
-		gStatusLine[POS_PS + 4] |= 0x71;
-		gStatusLine[POS_PS + 5] |= 0x7F;
-
-		// "S" вплотную после "P" (отступ 0 колонок)
-		gStatusLine[POS_PS + 6]  |= 0x7F;
-		gStatusLine[POS_PS + 7]  |= 0x51;
-		gStatusLine[POS_PS + 8]  |= 0x55;
-		gStatusLine[POS_PS + 9]  |= 0x55;
-		gStatusLine[POS_PS + 10] |= 0x45;
-		gStatusLine[POS_PS + 11] |= 0x7F;
+		UI_PrintStringSmallBuffer("PS", gStatusLine + POS_PS);
 	}
 
 	// === Индикатор блокировки клавиатуры (замок) ===
@@ -154,6 +106,32 @@ void UI_DisplayStatus()
 		gStatusLine[POS_B + 5] |= 0x7F;
 	}
 
+
+        // === S-МЕТР В СТАТУСБАРЕ (при приёме) ===
+    if (gCurrentFunction == FUNCTION_RECEIVE ||
+        gCurrentFunction == FUNCTION_MONITOR ||
+        gCurrentFunction == FUNCTION_INCOMING)
+    {
+        uint16_t rssi = BK4819_GetRSSI();
+        if (rssi > 50) {  // показываем только при нормальном сигнале
+            sLevelAttributes sLevelAtt = GetSLevelAttributes(rssi, gTxVfo->freq_config_RX.Frequency);
+
+             char meterStr[8];
+    sprintf(meterStr, "S%d", (sLevelAtt.sLevel >= 9 || sLevelAtt.over > 0) ? 9 : sLevelAtt.sLevel);
+
+            // ПОЗИЦИЯ — МЕНЯЙ ЗДЕСЬ
+            unsigned int meter_x = 64;  // ← основная позиция (70 — слева от батареи)
+            unsigned int space_needed = 7 * strlen(meterStr);
+            unsigned int start_x = meter_x;
+
+            // Автоматическая защита от переполнения (чтобы не затирать батарею)
+            if (start_x + space_needed > LCD_WIDTH - 20) {  // оставляем место под батарею
+                start_x = LCD_WIDTH - 20 - space_needed;
+            }
+
+            UI_PrintStringSmallBuffer(meterStr, gStatusLine + start_x);
+        }
+    }
 	// === Battery voltage / percentage ===
 	{
 		char s[8];
@@ -199,6 +177,8 @@ void UI_DisplayStatus()
 			gStatusLine[px] |= pattern;
 		}
 	}*/
+
+	
 
 	ST7565_BlitStatusLine();
 }

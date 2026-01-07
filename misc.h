@@ -172,7 +172,6 @@ extern volatile uint16_t     gTailNoteEliminationCountdown_10ms;
 extern volatile uint16_t 	 gFmPlayCountdown_10ms;
 extern bool                  gEnableSpeaker;
 extern uint8_t               gKeyInputCountdown;
-extern uint8_t               gKeyLockCountdown;
 extern bool                  bIsInLockScreen;
 extern uint8_t               gFoundCTCSS;
 extern uint8_t               gFoundCDCSS;
@@ -186,7 +185,7 @@ extern uint8_t               gReducedService;
 extern uint8_t               gBatteryVoltageIndex;
 
 // we are searching CTCSS/DCS inside RX ctcss/dcs menu
-extern bool         gCssBackgroundScan;
+extern bool                  gCssBackgroundScan;
 
 
 enum

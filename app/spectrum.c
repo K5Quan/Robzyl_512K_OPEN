@@ -75,23 +75,25 @@ static uint16_t MaxListenTime = 0;           // case 2
 static uint8_t PttEmission = 0;              // case 3      
 static uint32_t gScanRangeStart = 1400000;   // case 4      
 static uint32_t gScanRangeStop = 13000000;   // case 5      
-//Step                                // case 6      
-//ListenBW                            // case 7      
-//Modulation                          // case 8      
-//ClearSettings                       // case 9      
+//Step                                       // case 6      
+//ListenBW                                   // case 7      
+//Modulation                                 // case 8      
+//ClearSettings                              // case 9      
 static bool Backlight_On_Rx = 0;             // case 10        
-static bool gCounthistory = 1;        // case 11      
-//ClearHistory                        // case 12      
-//RAM                                 // case 13     
+static bool gCounthistory = 1;               // case 11      
+//ClearHistory                               // case 12      
+//RAM                                        // case 13     
 static uint16_t SpectrumSleepMs = 0;         // case 14
 static uint8_t Noislvl_OFF = 60;             // case 15
 static uint8_t Noislvl_ON = 50;
-static uint16_t osdPopupSetting = 500;      // case 16
+static uint16_t osdPopupSetting = 500;       // case 16
 static uint16_t UOO_trigger = 15;            // case 17
-
-
-#define PARAMETER_COUNT 18
+static uint8_t AUTO_KEYLOCK = AUTOLOCK_OFF;  // case 18
+#define PARAMETER_COUNT 19
 ////////////////////////////////////////////////////////////////////
+
+uint8_t  gKeylockCountdown = 0;
+bool     gIsKeylocked = false;
 static uint16_t osdPopupTimer = 1000;
 static uint32_t Fmax = 0;
 static uint32_t spectrumElapsedCount = 0;
@@ -1608,12 +1610,29 @@ static void SetTrigger50(){
   }
   ShowOSDPopup(triggerText);
 }
+static const uint8_t durations[] = {0, 20, 40, 60};
+
+void SPECTRUM_ResetKeylockTimer(void) {
+    if (AUTO_KEYLOCK) {
+        gKeylockCountdown = durations[AUTO_KEYLOCK];
+    }
+}
 
 static void OnKeyDown(uint8_t key) {
 
     //if (!gBacklightCountdown) {BACKLIGHT_TurnOn(); return;}
     BACKLIGHT_TurnOn();
-  
+    if (gIsKeylocked) {
+        // Seule la touche F (Function) permet de déverrouiller
+        if (key == KEY_F) { 
+            gIsKeylocked = false;
+            ShowOSDPopup("Unlocked");
+            SPECTRUM_ResetKeylockTimer();
+            // Bip ou retour visuel ici
+        }
+        return;
+    } 
+    SPECTRUM_ResetKeylockTimer();
     // NEW HANDLING: press of '4' key in SCAN_BAND_MODE
     if (appMode == SCAN_BAND_MODE && key == KEY_4 && currentState == SPECTRUM) {
         SetState(BAND_LIST_SELECT);
@@ -1939,6 +1958,12 @@ static void OnKeyDown(uint8_t key) {
                       UOO_trigger = isKey3 ? 
                                  (UOO_trigger >= 50 ? 0 : UOO_trigger + 1) :
                                  (UOO_trigger <= 0 ? 50 : UOO_trigger - 1);
+                      break;
+                  case 18: // AUTO_KEYLOCK
+                      AUTO_KEYLOCK = isKey3 ? 
+                                 (AUTO_KEYLOCK > 3 ? 0 : AUTO_KEYLOCK + 1) :
+                                 (AUTO_KEYLOCK <= 0 ? 2 : AUTO_KEYLOCK - 1);
+                      SPECTRUM_ResetKeylockTimer();
                       break;
                   
               }
@@ -2813,14 +2838,19 @@ static void UpdateListening(void) { // called every 10ms
     ResetScanStats();
 }
 
-
 static void Tick() {
   if (gNextTimeslice_500ms) {
     if (gBacklightCountdown > 0)
       if (--gBacklightCountdown == 0)	BACKLIGHT_TurnOff();
     gNextTimeslice_500ms = false;
-  
+    
+    if (gKeylockCountdown > 0) {gKeylockCountdown--;}
+    if (AUTO_KEYLOCK && !gKeylockCountdown) {
+      gIsKeylocked = true;
+      ShowOSDPopup("Locked"); //Iggy replace this ?
+	  }
 
+  
   }
 
   if (gNextTimeslice_10ms) {
@@ -3347,6 +3377,9 @@ static void GetParametersText(uint16_t index, char *buffer) {
             break;
         case 17:
             sprintf(buffer, "UOO_trigger: %d", UOO_trigger);
+            break;
+        case 18:
+            sprintf(buffer, "Keylock: %ds", durations[AUTO_KEYLOCK]/2);
             break;
 
         

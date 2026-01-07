@@ -39,6 +39,14 @@
 #include <stdint.h>
 #include <string.h>
 
+
+typedef enum {
+    AUTOLOCK_OFF,
+    AUTOLOCK_10S,
+    AUTOLOCK_20S,
+    AUTOLOCK_30S
+} AUTOLOCK_t;
+
 static const uint8_t DrawingEndY = 50;
 static const uint8_t U8RssiMap[] = {
     121, 115, 109, 103, 97, 91, 85, 79, 73, 63,

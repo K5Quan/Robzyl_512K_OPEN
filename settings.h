@@ -130,9 +130,7 @@ typedef struct {
 	
 	uint8_t               field37_0x32;
 	uint8_t               field38_0x33;
-
-	bool                  AUTO_KEYPAD_LOCK;
-	ALARM_Mode_t      ALARM_MODE;
+	ALARM_Mode_t      	  ALARM_MODE;
 	POWER_OnDisplayMode_t POWER_ON_DISPLAY_MODE;
 	ROGER_Mode_t          ROGER;
 	uint8_t               KEY_1_SHORT_PRESS_ACTION;

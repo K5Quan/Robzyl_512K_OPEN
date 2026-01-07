@@ -789,13 +789,6 @@ if (gBacklightCountdown > 0 && !gBacklightAlwaysOn &&
 	if (!gCssBackgroundScan)
 	{
 		{
-			if (gEeprom.AUTO_KEYPAD_LOCK && gKeyLockCountdown > 0 && gScreenToDisplay != DISPLAY_MENU)
-			{
-				if (--gKeyLockCountdown == 0)
-					gEeprom.KEY_LOCK = true;     // lock the keyboard
-				            // lock symbol needs showing
-			}
-
 			if (exit_menu)
 			{	exit_menu = false;
 				gMenuCountdown = 0;
@@ -891,9 +884,6 @@ static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 		FUNCTION_Select(FUNCTION_FOREGROUND);
 
 	gBatterySaveCountdown_10ms = battery_save_count_10ms;
-
-	if (gEeprom.AUTO_KEYPAD_LOCK)
-		gKeyLockCountdown = 30;     // 15 seconds
 
 	if (!bKeyPressed) // key released
 	{

@@ -75,7 +75,6 @@ const t_menu_item MenuList[] =
 	{"TxPwr",   MENU_TXP           },
 	{"BatVol",  MENU_VOL           },
 	{"POnMsg",  MENU_PONMSG        },
-	{"KeyLck",  MENU_AUTOLK        },
 	{"BatTxt",  MENU_BAT_TXT       },	
 	{"ChDele",  MENU_DEL_CH        },
 	{"ChName",  MENU_MEM_NAME      },	
@@ -442,10 +441,6 @@ void UI_DisplayMenu(void)
 				strcpy(String, gModulationStr[gSubMenuSelection]);
 				break;
 			
-
-			case MENU_AUTOLK:
-				strcpy(String, (gSubMenuSelection == 0) ? "OFF" : "AUTO");
-				break;
 
 			case MENU_ABR_ON_TX_RX:
 				strcpy(String, gSubMenu_RX_TX[gSubMenuSelection]);

@@ -407,16 +407,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
 
 void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
-	if (Key == KEY_F)
-	{
-		if (bKeyPressed && !bKeyHeld)
-		{
-			gWasFKeyPressed = true;
-			gKeyInputCountdown = 0;
-			
-		}
-		return;
-	}
+	
 
 	if (gFmRadioMode && Key != KEY_PTT && Key != KEY_EXIT)
 	{
@@ -487,9 +478,20 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 			if (gWasFKeyPressed) MAIN_Key_STAR(1);
 			else MAIN_Key_STAR(0);
 			break;
-		case KEY_F:
-			GENERIC_Key_F(bKeyPressed, bKeyHeld);
-			break;
+	    case KEY_F:
+        if (bKeyHeld && bKeyPressed) {  // ДЛИННОЕ нажатие — блокировка клавиатуры
+            gEeprom.KEY_LOCK = !gEeprom.KEY_LOCK;
+            gRequestSaveSettings = true;
+            gKeypadLocked = 0;
+            gWasFKeyPressed = false;
+            return;
+        }
+
+        if (bKeyPressed && !bKeyHeld) {  // КОРОТКОЕ нажатие — F-режим
+            gWasFKeyPressed = true;
+            gKeyInputCountdown = 0;
+        }
+        return;
 
 		case KEY_PTT:
 			GENERIC_Key_PTT(bKeyPressed);

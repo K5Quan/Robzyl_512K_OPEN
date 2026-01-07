@@ -214,7 +214,7 @@ void DisplayRSSIBar(const int16_t rssi)
         GUI_DisplaySmallestDark(rssiStr, x, y, false, true);
     }
 
-    // S-meter
+    /*/ S-meter
     if (smeterStr[0] != '\0')
     {
         uint8_t y_mr = 1; uint8_t x_mr = 54;
@@ -224,7 +224,7 @@ void DisplayRSSIBar(const int16_t rssi)
         uint8_t x = IS_MR_CHANNEL(gEeprom.ScreenChannel) ? x_mr : x_vfo;
 
         GUI_DisplaySmallestDark(smeterStr, x, y, false, true);
-    }
+    }*/
 
     // === СУБТОН — выводим только если найден (при активном приёме) ===
     if (gSubtone_String[0] != '\0')
@@ -296,7 +296,7 @@ void UI_DisplayMain(void)
 				{
 					const ChannelAttributes_t att = gMR_ChannelAttributes[gEeprom.ScreenChannel];
 					if (att.scanlist > 0) {
-						sprintf(String, "L%d", att.scanlist);
+						sprintf(String, "S%d", att.scanlist);
 						GUI_DisplaySmallestDark(String, 19, 25, false, true); // СПИСОК СКАНИРОВАНИЯ
 					}
 
@@ -715,12 +715,12 @@ static const vertical_dashed_t mr_vlines[] = {
 	{
 		// MR-режим — две строки
 		//GUI_DisplaySmallest("MR MODE",     1, 2, false, true); 
-		GUI_DisplaySmallestDark	("MR MODE",  0, 1, false, true);    // false, true шаг между символами
-		GUI_DisplaySmallestDark("CHAN",   102, 1, false, true);   // X=8,  Y=18
-		GUI_DisplaySmallestDark("SQL",  6,   40, false, false);
-		GUI_DisplaySmallestDark("BAND", 28,  40, false, false);
-		GUI_DisplaySmallestDark("STEP", 58,  40, false, false);
-		GUI_DisplaySmallestDark("POW",  88,  40, false, false);
+		GUI_DisplaySmallestDark	("MR MODE",     0, 1, false, true);    // false, true шаг между символами
+		GUI_DisplaySmallestDark("CHAN",     102, 1, false, true);   // X=8,  Y=18
+		GUI_DisplaySmallestDark("SQL",  6, 40, false, false);
+		GUI_DisplaySmallestDark("BAND", 28, 40, false, false);
+		GUI_DisplaySmallestDark("STEP", 58, 40, false, false);
+		GUI_DisplaySmallestDark("POW",  88, 40, false, false);
 		GUI_DisplaySmallestDark("MOD",  110, 40, false, false);
 	
 	}

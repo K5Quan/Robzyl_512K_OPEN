@@ -164,7 +164,6 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
 			*pMax = ARRAY_SIZE(gSubMenu_RX_TX) - 1;
 			break;
 
-		case MENU_AUTOLK:
 		case MENU_S_LIST:
 			*pMin = 0;
 			*pMax = 15;
@@ -426,11 +425,6 @@ void MENU_AcceptSetting(void)
 			gEeprom.TX_TIMEOUT_TIMER = gSubMenuSelection;
 			break;
 
-		case MENU_AUTOLK:
-			gEeprom.AUTO_KEYPAD_LOCK = gSubMenuSelection;
-			gKeyLockCountdown        = 30;
-			break;
-
 		case MENU_S_LIST:
 			gTxVfo->SCANLIST = gSubMenuSelection;
 			SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true);
@@ -665,10 +659,6 @@ void MENU_ShowCurrentSetting(void)
 
 		case MENU_TOT:
 			gSubMenuSelection = gEeprom.TX_TIMEOUT_TIMER;
-			break;
-
-		case MENU_AUTOLK:
-			gSubMenuSelection = gEeprom.AUTO_KEYPAD_LOCK;
 			break;
 
 		case MENU_S_LIST:
