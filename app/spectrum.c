@@ -102,8 +102,8 @@ static uint32_t spectrumElapsedCount = 0;
 static uint32_t SpectrumPauseCount = 0;
 static bool SPECTRUM_PAUSED;
 static uint8_t IndexMaxLT = 0;
-static const char *labels[] = {"OFF","2s","5s","10s","30s", "1m", "5m", "10m", "20m", "30m"};
-static const uint16_t listenSteps[] = {0, 2, 5, 10, 30, 60, 300, 600, 1200, 1800}; //in s
+static const char *labels[] = {"OFF","3s","6s","10s","20s", "1m", "5m", "10m", "20m", "30m"};
+static const uint16_t listenSteps[] = {0, 3, 6, 10, 20, 60, 300, 600, 1200, 1800}; //in s
 #define LISTEN_STEP_COUNT 9
 
 static uint8_t IndexPS = 0;
