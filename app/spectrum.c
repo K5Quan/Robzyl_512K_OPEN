@@ -84,10 +84,10 @@ static bool gCounthistory = 1;               // case 11
 //ClearHistory                               // case 12      
 //RAM                                        // case 13     
 static uint16_t SpectrumSleepMs = 0;         // case 14
-static uint8_t Noislvl_OFF = 60;             // case 15
-static uint8_t Noislvl_ON = 50;
-static uint16_t osdPopupSetting = 500;       // case 16
-static uint16_t UOO_trigger = 15;            // case 17
+static uint8_t Noislvl_OFF = 68;             // case 15
+static uint8_t Noislvl_ON = 58;
+static uint16_t osdPopupSetting = 250;       // case 16
+static uint16_t UOO_trigger = 25;            // case 17
 static uint8_t AUTO_KEYLOCK = AUTOLOCK_OFF;  // case 18
 static uint8_t Gain3D_Index = 1;             // case 19 
 static bool    Enable2XIF = 0;               // case 20 
@@ -2046,8 +2046,8 @@ static void OnKeyDown(uint8_t key) {
                       break;
                   case 15: // Noislvl_OFF
                       Noislvl_OFF = isKey3 ? 
-                                 (Noislvl_OFF >= 100 ? 30 : Noislvl_OFF + 1) :
-                                 (Noislvl_OFF <= 30 ? 100 : Noislvl_OFF - 1);
+                                 (Noislvl_OFF >= 100 ? 30 : Noislvl_OFF + 2) :
+                                 (Noislvl_OFF <= 30 ? 100 : Noislvl_OFF - 2);
                       Noislvl_ON = Noislvl_OFF - 10;                      
                       break;
                   case 16: //osdPopupSetting
@@ -2057,8 +2057,8 @@ static void OnKeyDown(uint8_t key) {
                       break;
                   case 17: // UOO_trigger
                       UOO_trigger = isKey3 ? 
-                                 (UOO_trigger >= 50 ? 0 : UOO_trigger + 1) :
-                                 (UOO_trigger <= 0 ? 50 : UOO_trigger - 1);
+                                 (UOO_trigger >= 50 ? 0 : UOO_trigger + 5) :
+                                 (UOO_trigger <= 0 ? 50 : UOO_trigger - 5);
                       break;
                   case 18: // AUTO_KEYLOCK
                       AUTO_KEYLOCK = isKey3 ? 
@@ -2086,12 +2086,16 @@ static void OnKeyDown(uint8_t key) {
                   case 21: // AF 300 SoundBoost
                       SoundBoost = !SoundBoost;
                       if(SoundBoost){
-                            BK4819_WriteRegister(0x54, 0x8546);   	//default is 0x9009
-                            BK4819_WriteRegister(0x55, 0x3af0);		//default is 0x31a9
+                            BK4819_WriteRegister(0x54, 0x90D1);   	//default is 0x9009
+                            BK4819_WriteRegister(0x55, 0x3271);		//default is 0x31a9
+                              BK4819_WriteRegister(0x75, 0xFC13);		//default is 0xF50B, clear is 0xFC13
+                            // BK4819_WriteRegister(0x54, 0x9009);   	//default is 0x9009
+                            //  BK4819_WriteRegister(0x55, 0x31a9);		//default is 0x31a9 
                       }
                       else {
-                        	BK4819_WriteRegister(0x54, 0x9009);
-                            BK4819_WriteRegister(0x55, 0x31A9);
+                        	 BK4819_WriteRegister(0x54, 0x9009);
+                             BK4819_WriteRegister(0x55, 0x31a9);
+                           BK4819_WriteRegister(0x75, 0xF50B);		//default is 0xF50B
                       }
                       break;
               }
@@ -2971,7 +2975,7 @@ static void UpdateListening(void) { // called every 10ms
 
     // Détection de fréquence stable
     if (peak.f == stableFreq) {
-        if (++stableCount >= 15) {  // ~500ms change to 150
+        if (++stableCount >= 15) {  // ~500ms CHANGE 50 TO 15
             if (!SpectrumMonitor) FillfreqHistory();
             stableCount = 0;
             if (gEeprom.BACKLIGHT_MAX > 5)
@@ -3380,10 +3384,10 @@ void ClearSettings()
   IndexMaxLT = 0;
   IndexPS = 0;
   Backlight_On_Rx = 1;
-  Noislvl_OFF = 62; 
-  Noislvl_ON = 52;  
-  UOO_trigger = 15;
-  osdPopupSetting = 500;
+  Noislvl_OFF = 68; 
+  Noislvl_ON = 58;  
+  UOO_trigger = 25;
+  osdPopupSetting = 250;
   settings.bandEnabled[0] = 1;
   BK4819_WriteRegister(BK4819_REG_10, 0x0145);
   BK4819_WriteRegister(BK4819_REG_11, 0x01B5);
@@ -3541,8 +3545,8 @@ static void GetParametersText(uint16_t index, char *buffer) {
             break;
         case 16:
             if (osdPopupSetting) {
-                uint8_t seconds = osdPopupSetting / 1000;
-                uint8_t decimals = (osdPopupSetting % 1000) / 100;
+                uint8_t seconds = osdPopupSetting / 500;   //1000
+                uint8_t decimals = (osdPopupSetting % 1000) / 200;  //1000/100
 
                 if (decimals) {
                     sprintf(buffer, "Popups: %d.%ds", seconds, decimals);
@@ -3572,7 +3576,7 @@ static void GetParametersText(uint16_t index, char *buffer) {
                 , "2X IF: %s", Enable2XIF ? "ON" : "OFF");
             break;
         case 21:
-            sprintf(buffer, "SoundBoost: %s", SoundBoost ? "ON" : "OFF");
+            sprintf(buffer, "Sound_Clear: %s", SoundBoost ? "ON" : "OFF");
             break;
         
         default:
