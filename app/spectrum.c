@@ -449,24 +449,26 @@ static void RestoreRegisters() {
   BK4819_WriteRegister(BK4819_REG_3F, R3F);
 }
 
-static void ToggleAFBit(bool on) {
-  //uint16_t reg = BK4819_ReadRegister(BK4819_REG_47);
-  uint32_t reg = regs_cache[BK4819_REG_47]; //KARINA mod
-  reg &= ~(1 << 8);
-  if (on)
-    reg |= on << 8;
-  BK4819_WriteRegister(BK4819_REG_47, reg);
-}
-
 static void ToggleAFDAC(bool on) {
   //uint32_t Reg = BK4819_ReadRegister(BK4819_REG_30);
   uint32_t Reg = regs_cache[BK4819_REG_30]; //KARINA mod
   Reg &= ~(1 << 9);
   if (on)
-  SYSTEM_DelayMs(5);
+  SYSTEM_DelayMs(50);
     Reg |= (1 << 9);
   BK4819_WriteRegister(BK4819_REG_30, Reg);
 }
+
+static void ToggleAFBit(bool on) {
+  //uint16_t reg = BK4819_ReadRegister(BK4819_REG_47);
+  uint32_t reg = regs_cache[BK4819_REG_47]; //KARINA mod
+  reg &= ~(1 << 8);
+  if (on)
+   SYSTEM_DelayMs(50);
+    reg |= on << 8;
+  BK4819_WriteRegister(BK4819_REG_47, reg);
+}
+
 
 static void SetF(uint32_t f) {
   if (f < 1400000 || f > 130000000) return;
@@ -925,12 +927,10 @@ static void ToggleRX(bool on) {
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
     }
     if (on != audioState) {
-         SYSTEM_DelayMs(10);
- ToggleAFDAC(on);
-         SYSTEM_DelayMs(10);
+       
+ ToggleAFDAC(on);  
  ToggleAFBit(on);
- SYSTEM_DelayMs(10);
-        ToggleAudio(on);
+  ToggleAudio(on);
         
          
        
