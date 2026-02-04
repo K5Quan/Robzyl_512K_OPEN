@@ -175,7 +175,7 @@ static BK4819_FilterBandwidth_t channelBandwidth;
 static bool isInitialized = false;
 static bool isListening = true;
 static bool newScanStart = true;
-static bool audioState = false; //true
+static bool audioState = true; //true
 static uint8_t bl;
 static State currentState = SPECTRUM, previousState = SPECTRUM;
 static uint8_t Spectrum_state; 
@@ -780,7 +780,7 @@ if (historyListActive == true){
       break;
   }
     // Additional delay to debounce keys
-    SYSTEM_DelayMs(200);
+    SYSTEM_DelayMs(100); //200
     isInitialized = false;
 }
 
