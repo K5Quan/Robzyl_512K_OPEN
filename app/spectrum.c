@@ -803,6 +803,9 @@ static void ToggleAudio(bool on) {
 
   audioState = on;
   
+  if (on) {
+    audioState = on;
+  
   if (on)
   SYSTEM_DelayMs(20); {
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
