@@ -780,7 +780,7 @@ if (historyListActive == true){
       break;
   }
     // Additional delay to debounce keys
-    SYSTEM_DelayMs(100); //200
+    SYSTEM_DelayMs(50); //200
     isInitialized = false;
 }
 
@@ -3040,7 +3040,7 @@ static void Tick() {
     if (osdPopupTimer > 0) {
         UI_DisplayPopup(osdPopupText);  // Wyświetl aktualny tekst
         ST7565_BlitFullScreen();
-        osdPopupTimer -= 10; 
+        osdPopupTimer -= 20; //10
         if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';}
         return;
     }
