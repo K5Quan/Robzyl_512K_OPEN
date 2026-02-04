@@ -780,7 +780,7 @@ if (historyListActive == true){
       break;
   }
     // Additional delay to debounce keys
-    SYSTEM_DelayMs(100); //200
+    SYSTEM_DelayMs(50); //200
     isInitialized = false;
 }
 
@@ -802,7 +802,8 @@ static uint16_t GetRssi(void) {
 static void ToggleAudio(bool on) {
 
   audioState = on;
-  if (on) {
+  if (on)
+    SYSTEM_DelayMs(20); {
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
   } else {
     GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
