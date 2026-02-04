@@ -802,9 +802,7 @@ static uint16_t GetRssi(void) {
 static void ToggleAudio(bool on) {
 
   audioState = on;
-  
   if (on) {
-
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
   } else {
     GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
