@@ -108,8 +108,8 @@ static const uint16_t listenSteps[] = {0, 3, 6, 10, 20, 60, 300, 600, 1200, 1800
 #define LISTEN_STEP_COUNT 9
 
 static uint8_t IndexPS = 0;
-static const char *labelsPS[] = {"OFF","100ms","500ms", "1s", "2s", "5s"};
-static const uint16_t PS_Steps[] = {0, 10, 50, 100, 200, 500}; //in 10 ms
+static const char *labelsPS[] = {"OFF","200ms","400ms", "1s", "2s", "5s"};
+static const uint16_t PS_Steps[] = {0, 20, 40, 100, 200, 500}; //in 10 ms
 #define PS_STEP_COUNT 5
 
 
@@ -2971,7 +2971,7 @@ static void UpdateListening(void) { // called every 10ms
 
     // Détection de fréquence stable
     if (peak.f == stableFreq) {
-        if (++stableCount >= 50) {  // ~500ms
+        if (++stableCount >= 15) {  // ~500ms change to 150
             if (!SpectrumMonitor) FillfreqHistory();
             stableCount = 0;
             if (gEeprom.BACKLIGHT_MAX > 5)
