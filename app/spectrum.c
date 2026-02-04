@@ -3039,7 +3039,7 @@ static void Tick() {
     if (osdPopupTimer > 0) {
         UI_DisplayPopup(osdPopupText);  // Wyświetl aktualny tekst
         ST7565_BlitFullScreen();
-        osdPopupTimer -= 20; //10
+        osdPopupTimer -= 10; //10
         if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';}
         return;
     }
