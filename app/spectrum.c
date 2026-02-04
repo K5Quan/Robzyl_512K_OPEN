@@ -86,7 +86,7 @@ static bool gCounthistory = 1;               // case 11
 static uint16_t SpectrumSleepMs = 0;         // case 14
 static uint8_t Noislvl_OFF = 68;             // case 15
 static uint8_t Noislvl_ON = 58;
-static uint16_t osdPopupSetting = 250;       // case 16
+static uint16_t osdPopupSetting = 500;       // case 16
 static uint16_t UOO_trigger = 25;            // case 17
 static uint8_t AUTO_KEYLOCK = AUTOLOCK_OFF;  // case 18
 static uint8_t Gain3D_Index = 1;             // case 19 
@@ -3545,8 +3545,8 @@ static void GetParametersText(uint16_t index, char *buffer) {
             break;
         case 16:
             if (osdPopupSetting) {
-                uint8_t seconds = osdPopupSetting / 500;   //1000
-                uint8_t decimals = (osdPopupSetting % 1000) / 200;  //1000/100
+                uint8_t seconds = osdPopupSetting / 1000;   //1000
+                uint8_t decimals = (osdPopupSetting % 1000) / 100;  //1000/100
 
                 if (decimals) {
                     sprintf(buffer, "Popups: %d.%ds", seconds, decimals);
