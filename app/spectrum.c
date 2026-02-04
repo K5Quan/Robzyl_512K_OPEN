@@ -175,7 +175,7 @@ static BK4819_FilterBandwidth_t channelBandwidth;
 static bool isInitialized = false;
 static bool isListening = true;
 static bool newScanStart = true;
-static bool audioState = true;
+static bool audioState = false; //true
 static uint8_t bl;
 static State currentState = SPECTRUM, previousState = SPECTRUM;
 static uint8_t Spectrum_state; 
@@ -802,6 +802,7 @@ static uint16_t GetRssi(void) {
 static void ToggleAudio(bool on) {
 
   audioState = on;
+  
   if (on) {
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
   } else {
