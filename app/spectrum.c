@@ -780,7 +780,7 @@ if (historyListActive == true){
       break;
   }
     // Additional delay to debounce keys
-    SYSTEM_DelayMs(100); //200
+    SYSTEM_DelayMs(50); //200
     isInitialized = false;
 }
 
