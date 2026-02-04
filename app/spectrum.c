@@ -803,7 +803,8 @@ static void ToggleAudio(bool on) {
 
   audioState = on;
   
-  if (on) {
+  if (on)
+  SYSTEM_DelayMs(20); {
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
   } else {
     GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
@@ -3050,6 +3051,7 @@ static void Tick() {
   if (SPECTRUM_PAUSED && (SpectrumPauseCount == 0)) {
       // fin de la pause
       SPECTRUM_PAUSED = false;
+      
       BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
       BK4819_RX_TurnOn(); //Wake up
       SYSTEM_DelayMs(10);
