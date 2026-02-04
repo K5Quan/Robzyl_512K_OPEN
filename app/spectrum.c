@@ -925,8 +925,11 @@ static void ToggleRX(bool on) {
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
     }
     if (on != audioState) {
+         SYSTEM_DelayMs(100);
         ToggleAudio(on);
+         SYSTEM_DelayMs(50);
         ToggleAFDAC(on);
+         SYSTEM_DelayMs(50);
         ToggleAFBit(on);
     }
     
