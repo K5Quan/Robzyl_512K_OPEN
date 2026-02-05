@@ -2175,6 +2175,8 @@ static void OnKeyDown(uint8_t key) {
         Skip();
         ShowOSDPopup("SKIPPED");  // ← попап при пропуске
         break;
+
+        
      
      case KEY_7:
 
@@ -2321,9 +2323,19 @@ static void OnKeyDown(uint8_t key) {
         if (Spectrum_state > 3) {
             Spectrum_state = 0;
         }
-
-        gRequestedSpectrumState = Spectrum_state;
+        
+         
+         char sText[32];
+        const char* s[] = {"FREG", "S LIST", "BAND", "RANGE"};
+        sprintf(sText, "MODE: %s", s[Spectrum_state]);
+	      ShowOSDPopup(sText);
+gRequestedSpectrumState = Spectrum_state;
         gSpectrumChangeRequested = true;
+
+        //case KEY_6: //mode
+        //Skip();
+        //ShowOSDPopup("SKIPPED");  // ← попап при пропуске
+        //break;
 
         // Полный сброс состояния спектра при смене режима
         isInitialized = false;
@@ -2367,7 +2379,7 @@ static void OnKeyDown(uint8_t key) {
     }
     else Blacklist();
     WaitSpectrum = 0;
-    ShowOSDPopup("BL ADD");  // ← попап при добавлении в BL
+    ShowOSDPopup("BL ADDED");  // ← попап при добавлении в BL
     break;
 
   case KEY_PTT:
