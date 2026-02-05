@@ -86,7 +86,7 @@ static bool gCounthistory = 1;               // case 11
 static uint16_t SpectrumSleepMs = 0;         // case 14
 static uint8_t Noislvl_OFF = 68;             // case 15
 static uint8_t Noislvl_ON = 58;
-static uint16_t osdPopupSetting = 500;       // case 16
+static uint16_t osdPopupSetting = 1000;       // case 16
 static uint16_t UOO_trigger = 25;            // case 17
 static uint8_t AUTO_KEYLOCK = AUTOLOCK_OFF;  // case 18
 static uint8_t Gain3D_Index = 1;             // case 19 
@@ -524,7 +524,7 @@ static void DeInitSpectrum(bool ComeBack) {
     uint8_t Spectrum_state = 0; //Spectrum Not Active
     EEPROM_WriteBuffer(0x1D00, &Spectrum_state);
     ToggleRX(0);
-    SYSTEM_DelayMs(50);
+    SYSTEM_DelayMs(20);
     }
     
   else {
@@ -532,7 +532,7 @@ static void DeInitSpectrum(bool ComeBack) {
 	  Spectrum_state+=10;
     EEPROM_WriteBuffer(0x1D00, &Spectrum_state);
     StorePtt_Toggle_Mode = Ptt_Toggle_Mode;
-    SYSTEM_DelayMs(50);
+    SYSTEM_DelayMs(20);
     Ptt_Toggle_Mode =0;
     }
 }
@@ -803,8 +803,7 @@ static uint16_t GetRssi(void) {
 static void ToggleAudio(bool on) {
 
   audioState = on;
-  if (on)
-   { SYSTEM_DelayMs(100);
+  if (on) { 
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
   } else {
     GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
@@ -870,7 +869,6 @@ static void ToggleRX(bool on) {
         // 2 моргания — для визуального подтверждения в спектре
         for (int i = 0; i < 2; i++) {
             GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
-            SYSTEM_DelayMs(30);
             GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
             if (i == 0) SYSTEM_DelayMs(50);
         }
@@ -3407,7 +3405,7 @@ void ClearSettings()
   Noislvl_OFF = 68; 
   Noislvl_ON = 58;  
   UOO_trigger = 25;
-  osdPopupSetting = 250;
+  osdPopupSetting = 1000;
   settings.bandEnabled[0] = 1;
   BK4819_WriteRegister(BK4819_REG_10, 0x0145);
   BK4819_WriteRegister(BK4819_REG_11, 0x01B5);
